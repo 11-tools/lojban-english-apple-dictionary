@@ -71,13 +71,6 @@
         keyword-tokens (re-split #"\s+" keyword)]
     (-> #{word stripped-word keyword} (into keyword-tokens) remove-bad-indexes
         transform-indexes join-definitions)))
-;    (str-join "\n"
-;      (map (partial format "<d:index d:value=\"%s\"/>")
-;        (remove nil?
-;          #{word
-;            (if (not= stripped-word word)
-;              (str "\n<d:index d:value=\"" stripped-word "\"/>"))
-;            keyword})))))
 
 (defn- prepare-definition [string]
   (-> string sub-definition-vars split-definitions transform-definitions join-definitions))
