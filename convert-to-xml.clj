@@ -36,12 +36,12 @@
   (re-gsub #"&apos;" "-" string))
 
 (def gismu-columns [[:word 0 6] [:rafsi 7 19] [:keyword 20 39] [:hint 41 60]
-              [:definition 62 157] [:textbook 160 162] [:frequency 163 169]
-              [:misc-info 170 nil]])
+                    [:definition 62 157] [:textbook 160 162] [:frequency 163 165]
+                    [:misc-info 169 nil]])
 
 (def cmavo-columns [[:word 0 11] [:keyword 20 39] [:hint 41 60]
-                    [:definition 62 157] [:textbook 160 162] [:frequency 163 168]
-                    [:misc-info 169 nil]])
+                    [:definition 62 157] [:textbook 160 162] [:frequency 163 164]
+                    [:misc-info 165 nil]])
 
 (defn parse-data [[line-seq column-limits word-type]]
   (for [line line-seq]
@@ -63,6 +63,21 @@
                                                       (str "<var>" variable "</var>"))))
 (def transform-definitions (partial map (partial format "<li>%s</li>")))
 (def join-definitions (partial str-join "\n"))
+(def remove-bad-indexes (partial remove #(or (nil? %) (= "the" %))))
+(def transform-indexes (partial map (partial format "<d:index d:value=\"%s\"/>")))
+
+(defn- prepare-indexes [word keyword]
+  (let [stripped-word (re-gsub stop-re "" word)
+        keyword-tokens (re-split #"\s+" keyword)]
+    (-> #{word stripped-word keyword} (into keyword-tokens) remove-bad-indexes
+        transform-indexes join-definitions)))
+;    (str-join "\n"
+;      (map (partial format "<d:index d:value=\"%s\"/>")
+;        (remove nil?
+;          #{word
+;            (if (not= stripped-word word)
+;              (str "\n<d:index d:value=\"" stripped-word "\"/>"))
+;            keyword})))))
 
 (defn- prepare-definition [string]
   (-> string sub-definition-vars split-definitions transform-definitions join-definitions))
@@ -83,7 +98,6 @@
   (doseq [word-datum data]
     (let [type (get-type word-datum)
           word (get-word word-datum)
-          stripped-word (re-gsub stop-re "" word)
           keyword (get-keyword word-datum)
           definition (get-definition word-datum)
           frequency (get-frequency word-datum)
@@ -100,14 +114,7 @@
 
 </d:entry>
 "
-        (sub-id-escape-chars word) word
-        (str-join "\n"
-          (map (partial format "<d:index d:value=\"%s\"/>")
-            (remove nil?
-              [word
-               (if (not= stripped-word word)
-                 (str "\n<d:index d:value=\"" stripped-word "\"/>"))
-               keyword])))
+        (sub-id-escape-chars word) word (prepare-indexes word keyword)
         word type (prepare-definition definition) (prepare-misc-info misc-info) frequency)))
   (println "</d:dictionary>"))
 
