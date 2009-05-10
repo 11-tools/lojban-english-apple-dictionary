@@ -8,11 +8,14 @@
 (def gismu-lines (rest (read-lines "gismu.txt")))
 (def cmavo-lines (rest (read-lines "cmavo.txt")))
 
-(defstruct word-s :type :word :rafsi :keyword :hint :definition :textbook :frequency)
+(defstruct word-s :type :word :rafsi :keyword :hint :definition :textbook :frequency
+                  :misc-info)
 (def get-type (accessor word-s :type))
 (def get-word (accessor word-s :word))
 (def get-keyword (accessor word-s :keyword))
 (def get-definition (accessor word-s :definition))
+(def get-frequency (accessor word-s :frequency))
+(def get-misc-info (accessor word-s :misc-info))
 
 (def xml-escaped-chars
   {#"<" "&lt;"
@@ -37,8 +40,8 @@
               [:misc-info 170 nil]])
 
 (def cmavo-columns [[:word 0 11] [:keyword 20 39] [:hint 41 60]
-                    [:definition 62 157] [:textbook 160 162] [:frequency 163 169]
-                    [:misc-info 170 nil]])
+                    [:definition 62 157] [:textbook 160 162] [:frequency 163 168]
+                    [:misc-info 169 nil]])
 
 (defn parse-data [[line-seq column-limits word-type]]
   (for [line line-seq]
@@ -64,6 +67,9 @@
 (defn- prepare-definition [string]
   (-> string sub-definition-vars split-definitions transform-definitions join-definitions))
 
+(defn- prepare-misc-info [string]
+  (if (empty? string) "" (format "<p class=\"note\">%s</p>" string)))
+
 (defn dump-xml [data]
   (println "<?xml version=\"1.0\" encoding=\"UTF-8\"?>")
   (println "<d:dictionary xmlns=\"http://www.w3.org/1999/xhtml\"")
@@ -79,7 +85,9 @@
           word (get-word word-datum)
           stripped-word (re-gsub stop-re "" word)
           keyword (get-keyword word-datum)
-          definition (get-definition word-datum)]
+          definition (get-definition word-datum)
+          frequency (get-frequency word-datum)
+          misc-info (get-misc-info word-datum)]
       (printf "<d:entry id=\"%s\" d:title=\"%s\">
 
 %s
@@ -88,6 +96,7 @@
 <ul>
 %s
 </ul>
+%s<p class=\"minor-note\">Frequency: %s</p>
 
 </d:entry>
 "
@@ -99,7 +108,7 @@
                (if (not= stripped-word word)
                  (str "\n<d:index d:value=\"" stripped-word "\"/>"))
                keyword])))
-        word type (prepare-definition definition))))
+        word type (prepare-definition definition) (prepare-misc-info misc-info) frequency)))
   (println "</d:dictionary>"))
 
 (dump-xml word-data)
