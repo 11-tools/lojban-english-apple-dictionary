@@ -22,4 +22,4 @@ The Clojure code inside the "convert-to-xml.clj" file in the "src" folder is lic
 
 The information in the dictionary and the word lists are in the public domain.
 
-“Lojban” is a trademark of the Logical Language Group.
+"Lojban" is a trademark of the Logical Language Group.
