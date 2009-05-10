@@ -59,7 +59,7 @@
                                               (subs line l-column))))])))))))
 
 ;(def word-data (mapcat parse-data {gismu-lines gismu-columns, cmavo-lines cmavo-columns}))
-(def word-data (mapcat parse-data [[gismu-lines gismu-columns "gismu"]]))
+(def word-data (mapcat parse-data [[gismu-lines gismu-columns :gismu]]))
 
 ;(println word-data)
 
@@ -74,13 +74,15 @@
   (println "</d:entry>")
   
   (doseq [word-datum data]
-    (let [word (get-word word-datum)
+    (let [type (get-type word-datum)
+          word (get-word word-datum)
           stripped-word (re-gsub stop-re "" word)
           keyword (get-keyword word-datum)
           definition (get-definition word-datum)]
       (printf "<d:entry id=\"%s\" d:title=\"%s\">
 %s
 <h1>%s</h1>
+<p class=\"word-type\">%s</p>
 <p>%s</p>
 
 </d:entry>
@@ -89,11 +91,11 @@
         (apply str
           (map (partial format "<d:index d:value=\"%s\"/>\n")
             (remove nil?
-              [word 
+              [word
                (if (not= stripped-word word)
                  (str "\n<d:index d:value=\"" stripped-word "\"/>"))
                keyword])))
-        word (prepare-definition definition))))
+        word type (prepare-definition definition))))
   (println "</d:dictionary>"))
 
 (dump-xml word-data)

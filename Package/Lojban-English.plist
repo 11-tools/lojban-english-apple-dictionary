@@ -17,20 +17,5 @@
 	<string>Joshua Choi</string>
 	<key>DCSDictionaryFrontMatterReferenceID</key>
 	<string>front-back-matter</string>
-	<key>DCSDictionaryPrefsHTML</key>
-	<string>LojbanEnglish_prefs.html</string>
-	<key>DCSDictionaryXSL</key>
-	<string>LojbanEnglish.xsl</string>
-	<key>DCSDictionaryDefaultPrefs</key>
-	<dict>
-		<key>pronunciation</key>
-		<string>0</string>
-		<key>display-column</key>
-		<string>1</string>
-		<key>display-picture</key>
-		<string>1</string>
-		<key>version</key>
-		<string>1</string>
-	</dict>
 </dict>
 </plist>
