@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>English</string>
+	<key>CFBundleIdentifier</key>
+	<string>name.choi.joshua.dictionary.LojbanEnglish</string>
+	<key>CFBundleName</key>
+	<string>Lojban-English</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<key>DCSDictionaryCopyright</key>
+	<string>Public domain.</string>
+	<key>DCSDictionaryManufacturerName</key>
+	<string>Joshua Choi</string>
+	<key>DCSDictionaryFrontMatterReferenceID</key>
+	<string>front-back-matter</string>
+	<key>DCSDictionaryPrefsHTML</key>
+	<string>LojbanEnglish_prefs.html</string>
+	<key>DCSDictionaryXSL</key>
+	<string>LojbanEnglish.xsl</string>
+	<key>DCSDictionaryDefaultPrefs</key>
+	<dict>
+		<key>pronunciation</key>
+		<string>0</string>
+		<key>display-column</key>
+		<string>1</string>
+		<key>display-picture</key>
+		<string>1</string>
+		<key>version</key>
+		<string>1</string>
+	</dict>
+</dict>
+</plist>
