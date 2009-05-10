@@ -23,7 +23,8 @@
    #">" "&gt;"
    #"&" "&amp;"
    #"'" "&apos;"
-   #"\"" "&quot;"})
+   #"\"" "&quot;"
+   #";" "[SEMICOLON]"})
 
 (def id-escaped-chars
   {#"&apos;" "h"
@@ -69,7 +70,7 @@
 (defn transform-string [string process]
   (if (empty? string) "" (process string)))
 
-(def split-definitions vector)
+(def split-definitions (partial re-split #"\s*\[SEMICOLON\]\s*"))
 ;(def split-definitions (partial re-split #"\s*;\s*"))
 (def sub-definition-vars (partial re-gsub #"(x\d)" (fn [[_ variable]]
                                                       (str "<var>" variable "</var>"))))
@@ -77,6 +78,7 @@
 (def join-definitions (partial str-join "\n"))
 (def remove-bad-indexes (partial remove #(or (nil? %) (= "the" %))))
 (def transform-indexes (partial map (partial format "<d:index d:value=\"%s\"/>")))
+(def split-misc-info (comp (partial re-gsub #"\[SEMICOLON\]" ";") str))
 
 (defn- prepare-indexes [word keyword]
   (let [stripped-word (re-gsub stop-re "" word)
@@ -88,7 +90,7 @@
   (-> string sub-definition-vars split-definitions transform-definitions join-definitions))
 
 (defn- prepare-misc-info [string]
-  (transform-string string (partial format "<p class=\"note\">%s</p>")))
+  (-> string split-misc-info (transform-string (partial format "<p class=\"note\">%s</p>"))))
 
 (defn dump-xml [data]
   (println "<?xml version=\"1.0\" encoding=\"UTF-8\"?>")
