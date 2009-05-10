@@ -9,7 +9,7 @@
 (def cmavo-lines (rest (read-lines "cmavo.txt")))
 
 (defstruct word-s :type :word :rafsi :keyword :hint :definition :textbook :frequency)
-(def get-type (accessor word-s :word))
+(def get-type (accessor word-s :type))
 (def get-word (accessor word-s :word))
 (def get-keyword (accessor word-s :keyword))
 (def get-definition (accessor word-s :definition))
@@ -32,12 +32,6 @@
 (defn sub-id-escape-chars [string]
   (re-gsub #"&apos;" "-" string))
 
-(defn prepare-definition [string]
-  (re-gsub #"(x\d)"
-    (fn [[_ variable]]
-      (str "<var>" variable "</var>"))
-    string))
-
 (def gismu-columns [[:word 0 6] [:rafsi 7 19] [:keyword 20 39] [:hint 41 60]
               [:definition 62 157] [:textbook 160 162] [:frequency 163 169]
               [:misc-info 170 nil]])
@@ -59,14 +53,21 @@
                                               (subs line l-column))))])))))))
 
 ;(def word-data (mapcat parse-data {gismu-lines gismu-columns, cmavo-lines cmavo-columns}))
-(def word-data (mapcat parse-data [[gismu-lines gismu-columns :gismu]]))
+(def word-data (mapcat parse-data [[gismu-lines gismu-columns "gismu"]]))
 
-;(println word-data)
+(def split-definitions (partial re-split #"\s*;\s*"))
+(def sub-definition-vars (partial re-gsub #"(x\d)" (fn [[_ variable]]
+                                                      (str "<var>" variable "</var>"))))
+(def transform-definitions (partial map (partial format "<li>%s</li>")))
+(def join-definitions (partial str-join "\n"))
+
+(defn- prepare-definition [string]
+  (-> string sub-definition-vars split-definitions transform-definitions join-definitions))
 
 (defn dump-xml [data]
   (println "<?xml version=\"1.0\" encoding=\"UTF-8\"?>")
   (println "<d:dictionary xmlns=\"http://www.w3.org/1999/xhtml\"")
-  (println "  xmlns:d=\"http://www.apple.com/DTDs/DictionaryService-1.0.rng\">")
+  (println "  xmlns:d=\"http://www.apple.com/DTDs/DictionaryService-1.0.rng\">\n")
   
   (println "<d:entry id=\"front-back-matter\" d:title=\"(front/back matter)\">")
   (println "<h1>The Lojban Dictionary in English</h1>")
@@ -80,16 +81,19 @@
           keyword (get-keyword word-datum)
           definition (get-definition word-datum)]
       (printf "<d:entry id=\"%s\" d:title=\"%s\">
+
 %s
 <h1>%s</h1>
 <p class=\"word-type\">%s</p>
-<p>%s</p>
+<ul>
+%s
+</ul>
 
 </d:entry>
 "
         (sub-id-escape-chars word) word
-        (apply str
-          (map (partial format "<d:index d:value=\"%s\"/>\n")
+        (str-join "\n"
+          (map (partial format "<d:index d:value=\"%s\"/>")
             (remove nil?
               [word
                (if (not= stripped-word word)
