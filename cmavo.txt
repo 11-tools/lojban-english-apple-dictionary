@@ -26,7 +26,7 @@
  ba'anai   UI*2     I remember                                evidential: I expect - I experience - I remember
  ba'e      BAhE     emphasize next                            forethought emphasis indicator; indicates next word is especially emphasized
  ba'i      BAI      replaced by                               basti modal, 1st place                            replaced by ...
- ba'o      ZAhO     perfective                                interval event contour: in the aftermath of ...; since ...; perfective              |     |----
+ ba'o      ZAhO     perfective                                interval event contour: in the aftermath of ...; since ...; perfective
  ba'u      UI3      exaggeration                              discursive: exaggeration - accuracy - understatement                                                      (cf. satci, dukse)
  ba'ucu'i  UI*3     accuracy                                  discursive: exaggeration - accuracy - understatement
  ba'unai   UI*3     understatement                            discursive: exaggeration - accuracy - understatement
