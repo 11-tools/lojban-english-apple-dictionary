@@ -80,7 +80,7 @@
                                                       (str "<var>" variable "</var>"))))
 (def transform-definitions (partial map (partial format "<li>%s</li>")))
 (def join-definitions (partial str-join "\n"))
-(def remove-bad-indexes (partial remove #(or (nil? %) (= "the" %))))
+(def remove-bad-indexes (partial remove #(or (nil? %) (= "the" %) (= "" %))))
 (def transform-indexes (partial map (partial format "<d:index d:value=\"%s\"/>")))
 (def split-misc-info (comp (partial re-gsub #"\[SEMICOLON\]" ";") str))
 
@@ -92,7 +92,7 @@
 
 (defn- prepare-secondary-info [word-datum rafsi word-type]
   (let [secondary-info (case word-type
-                         "gismu" ["rafsi: " (map #(vector "<strong>" % "</strong") rafsi)]
+                         "gismu" ["rafsi: " (map #(vector "<strong>" % "</strong>") rafsi)]
                          "cmavo" ["selma'o: " (split-definitions (get-selmaho word-datum))])]
     (apply str (flatten ["( " secondary-info " )"]))))
 
@@ -134,7 +134,7 @@
 "
         word-id word (prepare-indexes word keyword rafsi) word type
         (prepare-secondary-info word-datum rafsi type) (prepare-definition definition)
-        (prepare-misc-info misc-info) frequency)))
+        (prepare-misc-info misc-info) (or frequency "undefined"))))
   (println "</d:dictionary>"))
 
 (dump-xml word-data)
