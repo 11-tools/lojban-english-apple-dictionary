@@ -3,7 +3,12 @@ Lojban-English Plugin for Apple Dictionary
 
 Created in 2009 by Joshua Choi.
 
-Works in Apple Dictionary 2 in Mac OS X 10.5 only.
+About
+-----
+
+This is a plugin for Apple Dictionary: it adds a Lojban dictionary in English. The plugin works in Apple Dictionary 2 in Mac OS X 10.5 only.
+
+Currently, the dictionary only has *cmavo* and *gismu*, which I'll probably rectify later. If you're anxious, feel free to fork the [project](http://github.com/joshua-choi/lojban-english-apple-dictionary) on GitHub--it's easy.
 
 How to install
 --------------
