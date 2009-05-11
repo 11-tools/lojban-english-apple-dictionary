@@ -10,8 +10,7 @@ How to install
 
 If you're reading this from the Internet, download and mount the latest disk image from [the "Downloads" page of the project](http://github.com/joshua-choi/lojban-english-apple-dictionary/downloads). After that, 
 
-Once you've mounted the disk image, all you have to do is drag-and-drop the folder in the image into your Dictionaries folder:
-> ~/Library/Dictionaries
+Once you've mounted the disk image, all you have to do is drag-and-drop the folder in the image into your Dictionaries folder, for which there should be an alias conveniently inside the image.
 
 Once you restart Apple Dictionary, the Lojban-English dictionary should be visible in the toolbar and preferences.
 
