@@ -8,7 +8,7 @@ About
 
 This is a plugin for Apple Dictionary: it adds a Lojban dictionary in English. The plugin works in Apple Dictionary 2 in Mac OS X 10.5 only.
 
-Currently, the dictionary only has *cmavo* and *gismu*, which I'll probably rectify later. If you're anxious, feel free to fork [the project on GitHub](http://github.com/joshua-choi/lojban-english-apple-dictionary)--it's easy.
+Currently, the dictionary only has *cmavo* and *gismu*, which I'll probably rectify later. If you're anxious, feel free to fork [the project on GitHub](http://github.com/joshua-choi/lojban-english-apple-dictionary)—it's easy.
 
 How to install
 --------------
@@ -33,7 +33,7 @@ You don't need to read this section if you don't want to edit and reprogram the 
 
 Before you mess around, you should really read the [Apple Dictionary Services Programming Guide](http://developer.apple.com/documentation/userexperience/Conceptual/DictionaryServicesProgGuide/Introduction/Introduction.html).
 
-The script inside, "convert-to-xml.clj", is a Clojure script. It converts the *plain text definition files* into the *XML file*. You *don't need to do this* unless you want to rebuilt the XML file. To run it, you need the Java Virtual Machine--which shouldn't be a problem--and [Clojure](http://www.clojure.org). Also, you'll need the [clojure-contrib user libraries](http://www.github.com/kevinoneill/clojure-contrib/).
+The script inside, "convert-to-xml.clj", is a Clojure script. It converts the *plain text definition files* into the *XML file*. You *don't need to do this* unless you want to rebuilt the XML file. To run it, you need the Java Virtual Machine—which shouldn't be a problem—and [Clojure](http://www.clojure.org). Also, you'll need the [clojure-contrib user libraries](http://www.github.com/kevinoneill/clojure-contrib/).
 
 In order to run the script, your terminal needs to be inside the "src" folder. After you make a new XML file, run "make" and see if you get any errors. If no errors appear, run "make install; make clean" to install the dictionary in your Apple Dictionary and test it, also deleting the now-unneeded intermediate folder that appeared.
 
@@ -45,3 +45,4 @@ The Clojure code inside the "convert-to-xml.clj" file in the "src" folder is lic
 The information in the dictionary and the word lists are in the public domain.
 
 "Lojban" is a trademark of the Logical Language Group.
+
