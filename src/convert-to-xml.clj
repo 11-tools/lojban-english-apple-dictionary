@@ -2,6 +2,8 @@
 
 (use 'clojure.contrib.duck-streams)
 (use 'clojure.contrib.str-utils)
+(use 'clojure.contrib.seq-utils)
+(use 'clojure.contrib.fcase)
 
 (def stop-re #"\.")
 
@@ -11,9 +13,10 @@
 (defstruct word-s :type :word :rafsi :selmaho :keyword :hint :definition :textbook :frequency
                   :misc-info)
 (def get-type (accessor word-s :type))
-(def get-selmaho (accessor word-s :selmaho))
 (def get-word (accessor word-s :word))
 (def get-keyword (accessor word-s :keyword))
+(def get-selmaho (accessor word-s :selmaho))
+(def get-rafsi (accessor word-s :rafsi))
 (def get-definition (accessor word-s :definition))
 (def get-frequency (accessor word-s :frequency))
 (def get-misc-info (accessor word-s :misc-info))
@@ -23,13 +26,14 @@
    #">" "&gt;"
    #"&" "&amp;"
    #"'" "&apos;"
-   #"\"" "&quot;"
-   #";" "[SEMICOLON]"})
+   #"\"" "&quot;"})
 
 (def id-escaped-chars
   {#"&apos;" "h"
    #"\." "_"
    #"\s" "-"})
+
+(def sub-semicolons (partial re-gsub #";" "[SEMICOLON]"))
 
 (defn sub-escape-chars [escaped-chars string]
   (loop [cur-string string, cur-escaped-char-seq escaped-chars]
@@ -39,7 +43,7 @@
                (rest cur-escaped-char-seq)))
       cur-string)))
 
-(def sub-xml-escape-chars (partial sub-escape-chars xml-escaped-chars))
+(def sub-xml-escape-chars (comp (partial sub-escape-chars xml-escaped-chars) sub-semicolons))
 (def sub-id-escape-chars (partial sub-escape-chars id-escaped-chars))
 
 (def gismu-columns [[:word 0 6] [:rafsi 7 19] [:keyword 20 39] [:hint 41 60]
@@ -86,6 +90,12 @@
     (-> #{word stripped-word keyword} (into keyword-tokens) remove-bad-indexes
         transform-indexes join-definitions)))
 
+(defn- prepare-secondary-info [word-datum word-type]
+  (let [secondary-info (case word-type
+                         "gismu" ["rafsi: " (split-definitions (get-rafsi word-datum))]
+                         "cmavo" ["selma'o: " (split-definitions (get-selmaho word-datum))])]
+    (apply str (flatten ["( " secondary-info " )"]))))
+
 (defn- prepare-definition [string]
   (-> string sub-definition-vars split-definitions transform-definitions join-definitions))
 
@@ -113,7 +123,7 @@
 
 %s
 <h1>%s</h1>
-<p class=\"word-type\">%s</p>
+<p class=\"word-type\">%s %s</p>
 <ul>
 %s
 </ul>
@@ -121,7 +131,8 @@
 
 </d:entry>
 "
-        word-id word (prepare-indexes word keyword) word type (prepare-definition definition)
+        word-id word (prepare-indexes word keyword) word type
+        (prepare-secondary-info word-datum type) (prepare-definition definition)
         (prepare-misc-info misc-info) frequency)))
   (println "</d:dictionary>"))
 
