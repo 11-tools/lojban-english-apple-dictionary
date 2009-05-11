@@ -84,15 +84,15 @@
 (def transform-indexes (partial map (partial format "<d:index d:value=\"%s\"/>")))
 (def split-misc-info (comp (partial re-gsub #"\[SEMICOLON\]" ";") str))
 
-(defn- prepare-indexes [word keyword]
+(defn- prepare-indexes [word keyword rafsi]
   (let [stripped-word (re-gsub stop-re "" word)
         keyword-tokens (re-split #"\s+" keyword)]
-    (-> #{word stripped-word keyword} (into keyword-tokens) remove-bad-indexes
+    (-> #{word stripped-word keyword} (into keyword-tokens) (into rafsi) remove-bad-indexes
         transform-indexes join-definitions)))
 
-(defn- prepare-secondary-info [word-datum word-type]
+(defn- prepare-secondary-info [word-datum rafsi word-type]
   (let [secondary-info (case word-type
-                         "gismu" ["rafsi: " (split-definitions (get-rafsi word-datum))]
+                         "gismu" ["rafsi: " (map #(vector "<strong>" % "</strong") rafsi)]
                          "cmavo" ["selma'o: " (split-definitions (get-selmaho word-datum))])]
     (apply str (flatten ["( " secondary-info " )"]))))
 
@@ -116,6 +116,7 @@
     (let [type (get-type word-datum)
           word (get-word word-datum)
           keyword (get-keyword word-datum)
+          rafsi (if (= type "gismu") (split-definitions (get-rafsi word-datum)))
           definition (get-definition word-datum)
           frequency (get-frequency word-datum)
           misc-info (get-misc-info word-datum)]
@@ -131,8 +132,8 @@
 
 </d:entry>
 "
-        word-id word (prepare-indexes word keyword) word type
-        (prepare-secondary-info word-datum type) (prepare-definition definition)
+        word-id word (prepare-indexes word keyword rafsi) word type
+        (prepare-secondary-info word-datum rafsi type) (prepare-definition definition)
         (prepare-misc-info misc-info) frequency)))
   (println "</d:dictionary>"))
 
