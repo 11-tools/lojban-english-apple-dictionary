@@ -7,11 +7,11 @@
 
 (def stop-re #"\.")
 
-(def gismu-lines (rest (read-lines "gismu.txt")))
-(def cmavo-lines (rest (read-lines "cmavo.txt")))
+(def gismu-lines (rest (read-lines "src/gismu.txt")))
+(def cmavo-lines (rest (read-lines "src/cmavo.txt")))
 
-(defstruct word-s :type :word :rafsi :selmaho :keyword :hint :definition :textbook :frequency
-                  :misc-info)
+(defstruct word-s :type :word :rafsi :selmaho :keyword :hint :definition :textbook
+                  :frequency :misc-info)
 (def get-type (accessor word-s :type))
 (def get-word (accessor word-s :word))
 (def get-keyword (accessor word-s :keyword))
@@ -78,6 +78,7 @@
 ;(def split-definitions (partial re-split #"\s*;\s*"))
 (def sub-definition-vars (partial re-gsub #"(x\d)" (fn [[_ variable]]
                                                       (str "<var>" variable "</var>"))))
+(def split-rafsi (partial re-split #"\s"))
 (def transform-definitions (partial map (partial format "<li>%s</li>")))
 (def join-definitions (partial str-join "\n"))
 (def remove-bad-indexes (partial remove #(or (nil? %) (= "the" %) (= "" %))))
@@ -93,14 +94,16 @@
 (defn- prepare-secondary-info [word-datum rafsi word-type]
   (let [secondary-info (case word-type
                          "gismu" ["rafsi: " (map #(vector "<strong>" % "</strong>") rafsi)]
-                         "cmavo" ["selma'o: " (split-definitions (get-selmaho word-datum))])]
+                         "cmavo" ["selma'o: " (split-definitions
+                                                (get-selmaho word-datum))])]
     (apply str (flatten ["( " secondary-info " )"]))))
 
 (defn- prepare-definition [string]
   (-> string sub-definition-vars split-definitions transform-definitions join-definitions))
 
 (defn- prepare-misc-info [string]
-  (-> string split-misc-info (transform-string (partial format "<p class=\"note\">%s</p>"))))
+  (-> string split-misc-info
+    (transform-string (partial format "<p class=\"note\">%s</p>"))))
 
 (defn dump-xml [data]
   (println "<?xml version=\"1.0\" encoding=\"UTF-8\"?>")
@@ -116,7 +119,7 @@
     (let [type (get-type word-datum)
           word (get-word word-datum)
           keyword (get-keyword word-datum)
-          rafsi (if (= type "gismu") (split-definitions (get-rafsi word-datum)))
+          rafsi (if (= type "gismu") (split-rafsi (get-rafsi word-datum)))
           definition (get-definition word-datum)
           frequency (get-frequency word-datum)
           misc-info (get-misc-info word-datum)]
