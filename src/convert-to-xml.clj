@@ -7,11 +7,10 @@
 
 (def stop-re #"\.")
 
-(def gismu-lines (rest (read-lines "src/gismu.txt")))
-(def cmavo-lines (rest (read-lines "src/cmavo.txt")))
-
 (defstruct word-s :type :word :rafsi :selmaho :keyword :hint :definition :textbook
-                  :frequency :misc-info)
+                  :frequency :misc-info :etymologies)
+(defstruct etymologies-s :chinese :spanish :english :russian :hindi)
+(defstruct etymology-s :lojbanized :native :english :comment)
 (def get-type (accessor word-s :type))
 (def get-word (accessor word-s :word))
 (def get-keyword (accessor word-s :keyword))
@@ -20,6 +19,8 @@
 (def get-definition (accessor word-s :definition))
 (def get-frequency (accessor word-s :frequency))
 (def get-misc-info (accessor word-s :misc-info))
+
+; Word data functions
 
 (def xml-escaped-chars
   {#"<" "&lt;"
@@ -67,9 +68,30 @@
                                                   (subs line l-column r-column)
                                                   (subs line l-column))))])))))))))
 
+; Word origin functions
+
+(def process-chinese [fields]
+  [(fields 0) (struct etymology-s
+                (fields 2) [(fields 3) (fields 4) (fields 5)] (fields 6) (fields 7))])
+
+(defn parse-language-1 [field-processor line-seq]
+  (into {} (map (comp field-processor (partial re-split #"\t")) line-seq)))
+
+; This is where the word data is read from the TXT files.
+
+(def gismu-lines (rest (read-lines "src/gismu.txt")))
+(def cmavo-lines (rest (read-lines "src/cmavo.txt")))
+
 (def word-data
   (apply merge (map parse-data [[gismu-lines gismu-columns "gismu"]
                                 [cmavo-lines cmavo-columns "cmavo"]])))
+
+; This is where the word origin data is read.
+
+(def etymology-data
+  (parse-language-1 process-chinese (read-lines "src/lojban-source-words_zh.txt")))
+
+; Dump word data as Apple dictionary XML.
 
 (defn transform-string [string process]
   (if (empty? string) "" (process string)))
