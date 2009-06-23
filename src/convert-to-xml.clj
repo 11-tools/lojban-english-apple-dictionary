@@ -78,7 +78,8 @@
 ;(def split-definitions (partial re-split #"\s*;\s*"))
 (def sub-definition-vars (partial re-gsub #"(x\d)" (fn [[_ variable]]
                                                       (str "<var>" variable "</var>"))))
-(def split-rafsi (partial re-split #"\s"))
+(defn split-rafsi [x]
+  (if (= x "") nil (re-split #"\s+" x)))
 (def transform-definitions (partial map (partial format "<li>%s</li>")))
 (def join-definitions (partial str-join "\n"))
 (def remove-bad-indexes (partial remove #(or (nil? %) (= "the" %) (= "" %))))
@@ -92,12 +93,16 @@
         transform-indexes join-definitions)))
 
 (defn- prepare-secondary-info [word-datum rafsi word-type]
-  (let [secondary-info (case word-type
-                         "gismu" ["rafsi: " (map #(vector "<strong>" % "</strong>")
-                                              (str-join " " rafsi))]
-                         "cmavo" ["selma'o: " (split-definitions
-                                                (get-selmaho word-datum))])]
-    (apply str (flatten ["( " secondary-info " )"]))))
+  (let [secondary-info
+        (case word-type
+          "gismu"
+            (cons "rafsi: "
+              (if (empty? rafsi)
+                "none"
+                (interpose ", " (map #(vector "<strong>" % "</strong>") rafsi))))
+          "cmavo"
+            (cons "selma'o: " (split-definitions (get-selmaho word-datum))))]
+    (apply str (flatten [" ( " secondary-info " )"]))))
 
 (defn- prepare-definition [string]
   (-> string sub-definition-vars split-definitions transform-definitions join-definitions))
@@ -128,7 +133,7 @@
 
 %s
 <h1>%s</h1>
-<p class=\"word-type\">%s %s</p>
+<p class=\"word-type\">%s%s</p>
 <ul>
 %s
 </ul>
