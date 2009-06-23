@@ -44,5 +44,7 @@ The Clojure code inside the "convert-to-xml.clj" file in the "src" folder is lic
 
 The information in the dictionary and the word lists are in the public domain.
 
+The dictionary's etymologies and word origins are thanks to [Mr./Ms. Mublin](https://www.dealloc.org/~mublin/), and were placed in the public domain.
+
 "Lojban" is a trademark of the Logical Language Group.
 
