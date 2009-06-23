@@ -93,7 +93,8 @@
 
 (defn- prepare-secondary-info [word-datum rafsi word-type]
   (let [secondary-info (case word-type
-                         "gismu" ["rafsi: " (map #(vector "<strong>" % "</strong>") rafsi)]
+                         "gismu" ["rafsi: " (map #(vector "<strong>" % "</strong>")
+                                              (str-join " " rafsi))]
                          "cmavo" ["selma'o: " (split-definitions
                                                 (get-selmaho word-datum))])]
     (apply str (flatten ["( " secondary-info " )"]))))
