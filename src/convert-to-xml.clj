@@ -157,7 +157,7 @@
 
 (defn- make-etymology-table [word]
   (str-flatten
-    ["<table>\n<tr><th>Source language</th><th>Lojbanized word</th><th>Native word</th><th>Word translation</th><th>Comment</th></tr>\n"
+    ["<h2>Etymologies</h2>\n<table>\n<tr><th>Source language</th><th>Lojbanized word</th><th>Native word</th><th>Word translation</th><th>Comment</th></tr>\n"
      (map (fn [language] (vector "<tr>" (map #(vector "<td>" (val %) "</td>") language) "</tr>\n"))
        (etymology-data word))
      "</table>\n"]))
