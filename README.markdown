@@ -33,7 +33,7 @@ You don't need to read this section if you don't want to edit and reprogram the 
 
 Before you mess around, you should really read the [Apple Dictionary Services Programming Guide](http://developer.apple.com/documentation/userexperience/Conceptual/DictionaryServicesProgGuide/Introduction/Introduction.html).
 
-The script inside, "convert-to-xml.clj", is a Clojure script. It converts the *plain text definition files* into the *XML file*. You *don't need to do this* unless you want to rebuilt the XML file. To run it, you need the Java Virtual Machineâ€”which shouldn't be a problemâ€”and [Clojure](http://www.clojure.org). Also, you'll need the [clojure-contrib user libraries](http://www.github.com/kevinoneill/clojure-contrib/).
+The script inside, "convert-to-xml.clj", is a Clojure script. It converts the *plain text definition files* into the *XML file*. You *don't need to do this* unless you want to rebuilt the XML file. To run it, you need the Java Virtual Machineâ which shouldn't be a problemâ and [Clojure](http://www.clojure.org). Also, you'll need the [clojure-contrib user libraries](http://www.github.com/kevinoneill/clojure-contrib/).
 
 In order to run the script, your terminal needs to be inside the "src" folder. After you make a new XML file, run "make" and see if you get any errors. If no errors appear, run "make install; make clean" to install the dictionary in your Apple Dictionary and test it, also deleting the now-unneeded intermediate folder that appeared.
 
