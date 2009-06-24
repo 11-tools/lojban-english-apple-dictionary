@@ -79,7 +79,8 @@
   (fn [fields]
     [(fields 0)
      (struct etymology-s
-       language-name (fields 2) (interpose "/" (map fields source-fields))
+       language-name (fields 2)
+       (interpose "/" (filter (partial not= "") (map fields source-fields)))
        (if transliteration-field (get fields transliteration-field nil))
        (get fields comment-field nil))]))
 
