@@ -1,5 +1,8 @@
 ; This script was last used with Clojure 1.0
 
+; java -cp /Users/joshuachoi/Development/clojure/clojure-1.0.0.jar:/Users/joshuachoi/Development/clojure-contrib/clojure-contrib.jar:../FnParse/src/:./src/:./test/ clojure.main src/convert-to-xml.clj | tee src/Lojban-English.xml
+; cd src; make; make install; cd ..
+
 (use 'clojure.contrib.duck-streams)
 (use 'clojure.contrib.str-utils)
 (use 'clojure.contrib.seq-utils)
@@ -18,6 +21,7 @@
 (def get-definition (accessor word-s :definition))
 (def get-frequency (accessor word-s :frequency))
 (def get-misc-info (accessor word-s :misc-info))
+(def get-language (accessor etymology-s :language))
 
 (def apply-str (partial apply str))
 (def str-flatten (comp apply-str flatten))
@@ -136,14 +140,12 @@
     (-> #{word stripped-word keyword} (into keyword-tokens) (into rafsi) remove-bad-indexes
         transform-indexes join-definitions)))
 
-(defn- prepare-secondary-info [word-datum rafsi word-type]
+(defn- prepare-secondary-info [word-datum word rafsi word-type]
   (let [secondary-info
         (case word-type
           "gismu"
             (cons "rafsi: "
-              (if (empty? rafsi)
-                "none"
-                (interpose ", " (map #(vector "<strong>" % "</strong>") rafsi))))
+              (interpose ", " (map #(vector "<strong>" % "</strong>") (cons word rafsi))))
           "cmavo"
             (cons "selma'o: " (split-definitions (get-selmaho word-datum))))]
     (str-flatten [" ( " secondary-info " )"])))
@@ -156,11 +158,14 @@
     (transform-string (partial format "<p class=\"note\">%s</p>"))))
 
 (defn- make-etymology-table [word]
-  (str-flatten
-    ["<h2>Etymologies</h2>\n<table>\n<tr><th>Source language</th><th>Lojbanized word</th><th>Native word</th><th>Word translation</th><th>Comment</th></tr>\n"
-     (map (fn [language] (vector "<tr>" (map #(vector "<td>" (val %) "</td>") language) "</tr>\n"))
-       (etymology-data word))
-     "</table>\n"]))
+  (let [etymologies (etymology-data word)]
+    (if (empty? etymologies)
+      ""
+      (str-flatten
+        ["<h2>Etymologies</h2>\n<table>\n<tr><th>Source language</th><th>Lojbanized word</th><th>Native word</th><th>Word translation</th><th>Comment</th></tr>\n"
+         (map (fn [etymology] (vector "<tr>" (map #(vector "<td>" (val %) "</td>") etymology) "</tr>\n"))
+           etymologies)
+     "</table>\n"]))))
 
 (defn dump-xml [data]
   (println "<?xml version=\"1.0\" encoding=\"UTF-8\"?>")
@@ -180,7 +185,7 @@
           definition (get-definition word-datum)
           frequency (get-frequency word-datum)
           misc-info (get-misc-info word-datum)
-          etymology-table (if (= type "gismu") (make-etymology-table word))]
+          etymology-table (if (= type "gismu") (make-etymology-table word) "")]
       (printf "<d:entry id=\"%s\" d:title=\"%s\">
 
 %s
@@ -194,7 +199,7 @@
 </d:entry>
 "
         word-id word (prepare-indexes word keyword rafsi) word type
-        (prepare-secondary-info word-datum rafsi type) (prepare-definition definition)
+        (prepare-secondary-info word-datum word rafsi type) (prepare-definition definition)
         (prepare-misc-info misc-info) (or frequency "undefined") etymology-table)))
   (println "</d:dictionary>"))
 
