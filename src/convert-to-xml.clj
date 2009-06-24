@@ -7,6 +7,7 @@
 (use 'clojure.contrib.str-utils)
 (use 'clojure.contrib.seq-utils)
 (use 'clojure.contrib.fcase)
+(use 'name.choi.joshua.fnparse)
 
 (def stop-re #"\.")
 
@@ -102,30 +103,52 @@
   (map-from-pairs (mapcat #(parse-language-1 (val %) (read-lines (key %)))
                           language-processors)))
 
-; This is where the word data is read from the TXT files.
-
-(def gismu-lines (rest (read-lines "src/gismu.txt")))
-(def cmavo-lines (rest (read-lines "src/cmavo.txt")))
-
-(def word-data
-  (apply merge (map parse-data [[gismu-lines gismu-columns "gismu"]
-                                [cmavo-lines cmavo-columns "cmavo"]])))
-
-; This is where the word origin data is read.
-
-(def etymology-data (parse-languages))
 
 ;(map (partial println ">>>") etymology-data)
 
-; Dump word data as Apple dictionary XML.
+; Front/back matter functions.
+
+(def head-end-r (lit "<div class=\"centered\">"))
+;(def r-chopped-head (rep* anything))
+(def chopped-head-r (rep* (except anything head-end-r)))
+(def body-end-r (conc (lit "</body>") (lit "</html>")))
+(def body-r (rep+ (except anything body-end-r)))
+
+(def r-chapter-body
+;  (conc (rep* r-chopped-head) r-head-end r-body-end))
+  (complex [_ chopped-head-r
+            _ head-end-r
+            text body-r
+            _ body-end-r]
+    text))
+
+(defn load-reference-grammar-chapter [chapter-num]
+  (rule-match r-chapter-body
+    (fn [_] (throw (Exception. (str "Reference grammar chapter " chapter-num " invalid"))))
+    (fn [_ _] (throw (Exception. (str "Extra stuff in ref chap " chapter-num))))
+    {:remainder (read-lines (str "src/hrefgram/chapter" chapter-num ".html"))}))
+
+(def dec-headings
+  (comp (partial re-gsub #"<h(\d+)>"
+          #(let [level (-> % (get 1) Integer/parseInt dec)] (str "<h" level ">")))
+        (partial re-gsub #"</h(\d+)>"
+          #(let [level (-> % (get 1) Integer/parseInt dec)] (str "<h" level ">")))))
+
+(defn process-reference-grammar-chapter [chapter-num]
+  (-> chapter-num load-reference-grammar-chapter
+    ((partial interpose "\n")) apply-str dec-headings))
+
+; Dump data as Apple dictionary XML.
 
 (defn transform-string [string process]
   (if (empty? string) "" (process string)))
 
 (def split-definitions (partial re-split #"\s*\[SEMICOLON\]\s*"))
 ;(def split-definitions (partial re-split #"\s*;\s*"))
-(def sub-definition-vars (partial re-gsub #"(x\d)" (fn [[_ variable]]
-                                                      (str "<var>" variable "</var>"))))
+(def sub-definition-vars
+  (partial re-gsub #"(x\d)"
+    #(let [variable (get % 1)]
+       (str "<var>" variable "</var>"))))
 (defn split-rafsi [x]
   (if (= x "") nil (re-split #"\s+" x)))
 (def transform-definitions (partial map (partial format "<li>%s</li>")))
@@ -157,17 +180,19 @@
   (-> string split-misc-info
     (transform-string (partial format "<p class=\"note\">%s</p>"))))
 
-(defn- make-etymology-table [word]
+(defn- make-etymology-table [etymology-data word]
   (let [etymologies (etymology-data word)]
     (if (empty? etymologies)
       ""
       (str-flatten
         ["<h2>Etymologies</h2>\n<table>\n<tr><th>Source language</th><th>Lojbanized word</th><th>Native word</th><th>Word translation</th><th>Comment</th></tr>\n"
-         (map (fn [etymology] (vector "<tr>" (map #(vector "<td>" (val %) "</td>") etymology) "</tr>\n"))
+         (map
+          (fn [etymology]
+            (vector "<tr>" (map #(vector "<td>" (val %) "</td>") etymology) "</tr>\n"))
            etymologies)
      "</table>\n"]))))
 
-(defn dump-xml [data]
+(defn dump-xml [data etymology-data]
   (println "<?xml version=\"1.0\" encoding=\"UTF-8\"?>")
   (println "<d:dictionary xmlns=\"http://www.w3.org/1999/xhtml\"")
   (println "  xmlns:d=\"http://www.apple.com/DTDs/DictionaryService-1.0.rng\">\n")
@@ -185,7 +210,9 @@
           definition (get-definition word-datum)
           frequency (get-frequency word-datum)
           misc-info (get-misc-info word-datum)
-          etymology-table (if (= type "gismu") (make-etymology-table word) "")]
+          etymology-table (if (= type "gismu")
+                            (make-etymology-table etymology-data word)
+                            "")]
       (printf "<d:entry id=\"%s\" d:title=\"%s\">
 
 %s
@@ -203,8 +230,29 @@
         (prepare-misc-info misc-info) (or frequency "undefined") etymology-table)))
   (println "</d:dictionary>"))
 
-(dump-xml word-data)
+(defn main- []
+  (let [
+        ; This is where the word data is read from the TXT files.
+        
+        gismu-lines (rest (read-lines "src/gismu.txt"))
+        cmavo-lines (rest (read-lines "src/cmavo.txt"))
+        
+        word-data
+          (apply merge (map parse-data [[gismu-lines gismu-columns "gismu"]
+                                        [cmavo-lines cmavo-columns "cmavo"]]))
+   
+        ; This is where the word origin data is read.
+        
+        etymology-data (parse-languages)
+   
+        ]
 
+    (println (process-reference-grammar-chapter 1))
+
+;    (dump-xml word-data etymology-data)
+    ))
+
+(main-)
 
 
 
