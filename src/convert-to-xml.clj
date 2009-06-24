@@ -9,8 +9,7 @@
 
 (defstruct word-s :type :word :rafsi :selmaho :keyword :hint :definition :textbook
                   :frequency :misc-info :etymologies)
-(defstruct etymologies-s :chinese :spanish :english :russian :hindi)
-(defstruct etymology-s :lojbanized :native :english :comment)
+(defstruct etymology-s :language :lojbanized :natives :transliteration :comment)
 (def get-type (accessor word-s :type))
 (def get-word (accessor word-s :word))
 (def get-keyword (accessor word-s :keyword))
@@ -19,6 +18,12 @@
 (def get-definition (accessor word-s :definition))
 (def get-frequency (accessor word-s :frequency))
 (def get-misc-info (accessor word-s :misc-info))
+
+(def apply-str (partial apply str))
+(def str-flatten (comp apply-str flatten))
+
+(defn map-from-pairs [pairs]
+  (reduce (fn [a-map [k v]] (assoc a-map k (conj (get a-map k []) v))) {} pairs))
 
 ; Word data functions
 
@@ -70,12 +75,27 @@
 
 ; Word origin functions
 
-(def process-chinese [fields]
-  [(fields 0) (struct etymology-s
-                (fields 2) [(fields 3) (fields 4) (fields 5)] (fields 6) (fields 7))])
+(defn language-processor [language-name source-fields transliteration-field comment-field]
+  (fn [fields]
+    [(fields 0)
+     (struct etymology-s
+       language-name (fields 2) (interpose "/" (map fields source-fields))
+       (if transliteration-field (get fields transliteration-field nil))
+       (get fields comment-field nil))]))
+
+(def language-processors
+  {"src/lojban-source-words_zh.txt" (language-processor "Chinese" [3 4 5] 6 7)
+   "src/lojban-source-words_es.txt" (language-processor "Spanish" [3] 4 5)
+   "src/lojban-source-words_en.txt" (language-processor "English" [3] nil 4)
+   "src/lojban-source-words_ru.txt" (language-processor "Russian" [3] 4 6)
+   "src/lojban-source-words_hi.txt" (language-processor "Hindi" [3] 4 6)})
 
 (defn parse-language-1 [field-processor line-seq]
-  (into {} (map (comp field-processor (partial re-split #"\t")) line-seq)))
+  (map (comp field-processor vec (partial re-split #"\t")) line-seq))
+
+(defn parse-languages []
+  (map-from-pairs (mapcat #(parse-language-1 (val %) (read-lines (key %)))
+                          language-processors)))
 
 ; This is where the word data is read from the TXT files.
 
@@ -88,8 +108,9 @@
 
 ; This is where the word origin data is read.
 
-(def etymology-data
-  (parse-language-1 process-chinese (read-lines "src/lojban-source-words_zh.txt")))
+(def etymology-data (parse-languages))
+
+;(map (partial println ">>>") etymology-data)
 
 ; Dump word data as Apple dictionary XML.
 
@@ -124,7 +145,7 @@
                 (interpose ", " (map #(vector "<strong>" % "</strong>") rafsi))))
           "cmavo"
             (cons "selma'o: " (split-definitions (get-selmaho word-datum))))]
-    (apply str (flatten [" ( " secondary-info " )"]))))
+    (str-flatten [" ( " secondary-info " )"])))
 
 (defn- prepare-definition [string]
   (-> string sub-definition-vars split-definitions transform-definitions join-definitions))
@@ -132,6 +153,13 @@
 (defn- prepare-misc-info [string]
   (-> string split-misc-info
     (transform-string (partial format "<p class=\"note\">%s</p>"))))
+
+(defn- make-etymology-table [word]
+  (str-flatten
+    ["<table>\n<tr>Source language<th>Lojbanized word</th>Native word<th>Word translation</th><th>Comment</th></tr>\n"
+     (map (fn [language] (vector "<tr>" (map #(vector "<td>" (val %) "</td>") language) "</tr>\n"))
+       (etymology-data word))
+     "</table>\n"]))
 
 (defn dump-xml [data]
   (println "<?xml version=\"1.0\" encoding=\"UTF-8\"?>")
@@ -150,7 +178,8 @@
           rafsi (if (= type "gismu") (split-rafsi (get-rafsi word-datum)))
           definition (get-definition word-datum)
           frequency (get-frequency word-datum)
-          misc-info (get-misc-info word-datum)]
+          misc-info (get-misc-info word-datum)
+          etymology-table (if (= type "gismu") (make-etymology-table word))]
       (printf "<d:entry id=\"%s\" d:title=\"%s\">
 
 %s
@@ -160,12 +189,12 @@
 %s
 </ul>
 %s<p class=\"minor-note\">Frequency: %s</p>
-
+%s
 </d:entry>
 "
         word-id word (prepare-indexes word keyword rafsi) word type
         (prepare-secondary-info word-datum rafsi type) (prepare-definition definition)
-        (prepare-misc-info misc-info) (or frequency "undefined"))))
+        (prepare-misc-info misc-info) (or frequency "undefined") etymology-table)))
   (println "</d:dictionary>"))
 
 (dump-xml word-data)
