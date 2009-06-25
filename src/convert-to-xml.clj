@@ -134,9 +134,19 @@
         (partial re-gsub #"</h(\d+)>"
           #(let [level (-> % (get 1) Integer/parseInt dec)] (str "<h" level ">")))))
 
+(defn surround-chapter [lines chapter-num]
+  (concat
+    [(format "<d:entry id=\"grammar-chapter-%s\" d:title=\"Grammar Chapter %s\">\n"
+       chapter-num chapter-num)]
+    lines
+    ["\n</d:entry>"]))
+
 (defn process-reference-grammar-chapter [chapter-num]
-  (-> chapter-num load-reference-grammar-chapter
+  (-> chapter-num load-reference-grammar-chapter surround-chapter
     ((partial interpose "\n")) apply-str dec-headings))
+
+(defn process-reference-grammar [chapter-nums]
+  (map process-referenc-grammar-chapter chapter-nums))
 
 ; Dump data as Apple dictionary XML.
 
