@@ -1,7 +1,7 @@
 ; This script was last used with Clojure 1.0
 
 ; java -cp /Users/joshuachoi/Development/clojure/clojure-1.0.0.jar:/Users/joshuachoi/Development/clojure-contrib/clojure-contrib.jar:../FnParse/src/:./src/:./test/ clojure.main src/convert-to-xml.clj | tee src/Lojban-English.xml
-; cd src; make; make install; cd ..
+; cd src; make; make install; make clean; cd ..
 
 (use 'clojure.contrib.duck-streams)
 (use 'clojure.contrib.str-utils)
@@ -58,7 +58,7 @@
 (def sub-id-escape-chars (partial sub-escape-chars id-escaped-chars))
 
 (def gismu-columns [[:word 0 6] [:rafsi 7 19] [:keyword 20 39] [:hint 41 60]
-                    [:definition 62 157] [:textbook 160 162] [:frequency 163 164]
+                    [:definition 62 158] [:textbook 160 162] [:frequency 163 164]
                     [:misc-info 165 nil]])
 
 (def cmavo-columns [[:word 0 10] [:selmaho 11 19] [:keyword 20 61] [:definition 62 167]
@@ -108,10 +108,10 @@
 
 ; Front/back matter functions.
 
-(def head-end-r (lit "<div class=\"centered\">"))
+(def head-end-r (re-term #"\s*<div class=\"centered\">\s*"))
 ;(def r-chopped-head (rep* anything))
 (def chopped-head-r (rep* (except anything head-end-r)))
-(def body-end-r (conc (lit "</body>") (lit "</html>")))
+(def body-end-r (conc (re-term #"\s*</body>\s*") (re-term #"\s*</html>\s*")))
 (def body-r (rep+ (except anything body-end-r)))
 
 (def r-chapter-body
@@ -142,11 +142,11 @@
     ["\n</d:entry>"]))
 
 (defn process-reference-grammar-chapter [chapter-num]
-  (-> chapter-num load-reference-grammar-chapter surround-chapter
+  (-> chapter-num load-reference-grammar-chapter (surround-chapter chapter-num)
     ((partial interpose "\n")) apply-str dec-headings))
 
 (defn process-reference-grammar [chapter-nums]
-  (map process-referenc-grammar-chapter chapter-nums))
+  (map process-reference-grammar-chapter chapter-nums))
 
 ; Dump data as Apple dictionary XML.
 
@@ -202,7 +202,7 @@
            etymologies)
      "</table>\n"]))))
 
-(defn dump-xml [data etymology-data]
+(defn dump-xml [data etymology-data grammar-text]
   (println "<?xml version=\"1.0\" encoding=\"UTF-8\"?>")
   (println "<d:dictionary xmlns=\"http://www.w3.org/1999/xhtml\"")
   (println "  xmlns:d=\"http://www.apple.com/DTDs/DictionaryService-1.0.rng\">\n")
@@ -211,6 +211,7 @@
   (println "<h1>The Lojban Dictionary in English</h1>")
   (println "<p>Based on the word lists from the Logical Language Group of the 1990s</p>")
   (println "</d:entry>")
+  (apply println grammar-text)
   
   (doseq [[word-id word-datum] data]
     (let [type (get-type word-datum)
@@ -243,23 +244,21 @@
 (defn main- []
   (let [
         ; This is where the word data is read from the TXT files.
-        
         gismu-lines (rest (read-lines "src/gismu.txt"))
         cmavo-lines (rest (read-lines "src/cmavo.txt"))
-        
         word-data
           (apply merge (map parse-data [[gismu-lines gismu-columns "gismu"]
                                         [cmavo-lines cmavo-columns "cmavo"]]))
    
         ; This is where the word origin data is read.
-        
         etymology-data (parse-languages)
-   
+        
+        ; This is where the reference grammar is read.
+        reference-grammar (process-reference-grammar (range 1 22))
+        
         ]
 
-    (println (process-reference-grammar-chapter 1))
-
-;    (dump-xml word-data etymology-data)
+    (dump-xml word-data etymology-data reference-grammar)
     ))
 
 (main-)
