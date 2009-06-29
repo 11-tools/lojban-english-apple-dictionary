@@ -14,17 +14,14 @@
 
 (def stop-re #"\.")
 
-(defstruct word-s :type :word :rafsi :selmaho :keyword :hint :definition :textbook
-                  :notes :etymologies)
+(defstruct word-s :type :word :rafsi :selmaho :definition :notes :keywords :etymologies)
 (defstruct etymology-s :language :lojbanized :natives :transliteration :comment)
 (def get-type (accessor word-s :type))
 (def get-word (accessor word-s :word))
-(def get-keyword (accessor word-s :keyword))
 (def get-selmaho (accessor word-s :selmaho))
 (def get-rafsi (accessor word-s :rafsi))
 (def get-definition (accessor word-s :definition))
-(def get-frequency (accessor word-s :frequency))
-(def get-misc-info (accessor word-s :misc-info))
+(def get-notes (accessor word-s :notes))
 (def get-language (accessor etymology-s :language))
 
 (def apply-str (partial apply str))
@@ -62,21 +59,42 @@
 
 (def gismu-columns [[:word 0 6] [:rafsi 7 19] [:keyword 20 39] [:hint 41 60]
                     [:definition 62 158] [:textbook 160 162] [:frequency 163 164]
-                    [:misc-info 165 nil]])
+                    [:notes 165 nil]])
 
 (def cmavo-columns [[:word 0 10] [:selmaho 11 19] [:keyword 20 61] [:definition 62 167]
-                    [:misc-info 168 nil]])
+                    [:notes 168 nil]])
 
-(defn certain-direction?-fn [to-lang from-lang]
-  (fn [direction-node]
-    (let [node-attrs (:attrs direction-node)]
-      (and (= (:from node-attrs) from-lang) (= (:to node-attrs) to-lang)))))
+; {:tag :dictionary, :attrs nil, :content [{:tag :direction, :attrs {:from "lojban", :to "English"}, :content [{:tag :valsi, :attrs {:word "LIEtuvas", :type "cmene"}, :content [{:tag :definition, :attrs nil, :content ["Lithuania."]}]} {:tag :valsi, :attrs {:word "SINgapur", :type "cmene"}, :content [{:tag :definition, :attrs nil, :content ["Singapore."]}]} {:tag :valsi, :attrs {:word "VLANDeren", :type "cmene"}, :content [{:tag :definition, :attrs nil, :content ["Flanders."]}]} ... } ...]}
+
+(defn certain-direction-node [from-lang to-lang direction-nodes]
+  (some
+    (fn [each-node]
+      (let [node-attrs (:attrs each-node)]
+        (if (and (= (:from node-attrs) from-lang) (= (:to node-attrs) to-lang))
+          each-node)))
+    direction-nodes))
+
+(defn xml-tag-fn [xml-tag]
+  (fn [xml-node]
+    (= (:tag xml-node) xml-tag)))
+
+(defn parse-l-to-e [dict-content]
+  (let [dict-direction (certain-direction-node "lojban" "English" dict-content)]
+    (for [valsi (:content dict-direction)]
+      (let [attrs (:attrs valsi)
+            word-type (:type attrs)
+            word (:word attrs)
+            content (:content valsi)
+            rafsi (filter (xml-tag-fn "rafsi") content)
+            selmaho (filter (xml-tag-fn "selmaho") content)
+            definition (some (xml-tag-fn "definition") content)
+            notes (some (xml-tag-fn "notes") content)]
+        [word (struct word-s word-type word rafsi selmaho definition notes)]))))
 
 (defn parse-jbovlaste [source]
   (let [dict-content (:content (xml/parse source))
-        e-to-l (some (certain-direction?-fn "English" "lojban") dict-content)
-        l-to-e (some (certain-direction?-fn "lojban" "English") dict-content)]
-    ))
+        l-to-e (parse-l-to-e dict-content)]
+    (into {} l-to-e)))
 
 (defn parse-data [[line-seq column-limits word-type]]
   (into {}
@@ -141,7 +159,7 @@
 (def join-definitions (partial str-join "\n"))
 (def remove-bad-indexes (partial remove #(or (nil? %) (= "the" %) (= "" %))))
 (def transform-indexes (partial map (partial format "<d:index d:value=\"%s\"/>")))
-(def split-misc-info (comp (partial re-gsub #"\[SEMICOLON\]" ";") str))
+(def split-notes (comp (partial re-gsub #"\[SEMICOLON\]" ";") str))
 
 (defn- prepare-indexes [word keyword rafsi]
   (let [stripped-word (re-gsub stop-re "" word)
@@ -156,14 +174,15 @@
             (cons "rafsi: "
               (interpose ", " (map #(vector "<strong>" % "</strong>") (cons word rafsi))))
           "cmavo"
-            (cons "selma'o: " (split-definitions (get-selmaho word-datum))))]
+            (cons "selma'o: " (get-selmaho word-datum)))]
     (str-flatten [" ( " secondary-info " )"])))
 
 (defn- prepare-definition [string]
-  (-> string sub-definition-vars split-definitions transform-definitions join-definitions))
+  string)
+;  (-> string sub-definition-vars split-definitions transform-definitions join-definitions))
 
-(defn- prepare-misc-info [string]
-  (-> string split-misc-info
+(defn- prepare-notes [string]
+  (-> string split-notes
     (transform-string (partial format "<p class=\"note\">%s</p>"))))
 
 (defn- make-etymology-table [etymology-data word]
@@ -202,42 +221,37 @@
   (doseq [[word-id word-datum] data]
     (let [type (get-type word-datum)
           word (get-word word-datum)
-          keyword (get-keyword word-datum)
-          rafsi (if (= type "gismu") (split-rafsi (get-rafsi word-datum)))
+;          keyword (get-keyword word-datum)
+          rafsi (if (= type "gismu") (get-rafsi word-datum))
           definition (get-definition word-datum)
-          frequency (get-frequency word-datum)
-          misc-info (get-misc-info word-datum)
+          notes (get-notes word-datum)
           etymology-table (if (= type "gismu")
                             (make-etymology-table etymology-data word)
                             "")]
       (printf "<d:entry id=\"%s\" d:title=\"%s\">
 
-%s
 <h1>%s</h1>
 <p class=\"word-type\">%s%s</p>
 <ul>
 %s
 </ul>
-%s<p class=\"minor-note\">Frequency: %s</p>
+%s
 %s
 </d:entry>
 "
-        word-id word (prepare-indexes word keyword rafsi) word type
+        word-id word word type
+;        word-id word (prepare-indexes word keyword rafsi) word type
         (prepare-secondary-info word-datum word rafsi type) (prepare-definition definition)
-        (prepare-misc-info misc-info) (or frequency "undefined") etymology-table)))
+        (prepare-notes notes) etymology-table)))
   (println "</d:dictionary>"))
 
 (defn main- []
-  (let [
-        ; This is where the word data is read from the Jbovlaste XML dump.
+  (let [; This is where the word data is read from the Jbovlaste XML dump.
         word-data (parse-jbovlaste "src/xml-export.html")
-        
         ; This is where the word origin data is read.
-        etymology-data (parse-languages)
-        ]
-
-    (dump-xml word-data etymology-data)
-    ))
+        etymology-data (parse-languages)]
+;    (println word-data)))
+    (dump-xml word-data etymology-data)))
 
 (main-)
 
