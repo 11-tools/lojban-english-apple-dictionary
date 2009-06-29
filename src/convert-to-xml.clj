@@ -1,9 +1,11 @@
 ; This script was last used with Clojure 1.0
 
+; Meant to be run from inside the project folder, just outside the src folder.
 ; java -cp /Users/joshuachoi/Development/clojure/clojure-1.0.0.jar:/Users/joshuachoi/Development/clojure-contrib/clojure-contrib.jar:../FnParse/src/:./src/:./test/ clojure.main src/convert-to-xml.clj | tee src/Lojban-English.xml
 ; java -jar ~/Development/jing/bin/jing.jar /Developer/Extras/Dictionary\ Development\ Kit/documents/DictionarySchema/AppleDictionarySchema.rng src/Lojban-English.xml
 ; cd src; make; make install; make clean; cd ..
 
+(require '[clojure.xml :as xml])
 (use 'clojure.contrib.duck-streams)
 (use 'clojure.contrib.str-utils)
 (use 'clojure.contrib.seq-utils)
@@ -13,7 +15,7 @@
 (def stop-re #"\.")
 
 (defstruct word-s :type :word :rafsi :selmaho :keyword :hint :definition :textbook
-                  :frequency :misc-info :etymologies)
+                  :notes :etymologies)
 (defstruct etymology-s :language :lojbanized :natives :transliteration :comment)
 (def get-type (accessor word-s :type))
 (def get-word (accessor word-s :word))
@@ -64,6 +66,17 @@
 
 (def cmavo-columns [[:word 0 10] [:selmaho 11 19] [:keyword 20 61] [:definition 62 167]
                     [:misc-info 168 nil]])
+
+(defn certain-direction?-fn [to-lang from-lang]
+  (fn [direction-node]
+    (let [node-attrs (:attrs direction-node)]
+      (and (= (:from node-attrs) from-lang) (= (:to node-attrs) to-lang)))))
+
+(defn parse-jbovlaste [source]
+  (let [dict-content (:content (xml/parse source))
+        e-to-l (some (certain-direction?-fn "English" "lojban") dict-content)
+        l-to-e (some (certain-direction?-fn "lojban" "English") dict-content)]
+    ))
 
 (defn parse-data [[line-seq column-limits word-type]]
   (into {}
@@ -216,16 +229,11 @@
 
 (defn main- []
   (let [
-        ; This is where the word data is read from the TXT files.
-        gismu-lines (rest (read-lines "src/gismu.txt"))
-        cmavo-lines (rest (read-lines "src/cmavo.txt"))
-        word-data
-          (apply merge (map parse-data [[gismu-lines gismu-columns "gismu"]
-                                        [cmavo-lines cmavo-columns "cmavo"]]))
-   
+        ; This is where the word data is read from the Jbovlaste XML dump.
+        word-data (parse-jbovlaste "src/xml-export.html")
+        
         ; This is where the word origin data is read.
         etymology-data (parse-languages)
-        
         ]
 
     (dump-xml word-data etymology-data)
