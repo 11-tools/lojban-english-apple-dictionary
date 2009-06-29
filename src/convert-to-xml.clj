@@ -6,6 +6,7 @@
 ; cd src; make; make install; make clean; cd ..
 
 (require '[clojure.xml :as xml])
+(require '[clojure.contrib.str-utils2 :as s])
 (use 'clojure.contrib.duck-streams)
 (use 'clojure.contrib.str-utils)
 (use 'clojure.contrib.seq-utils)
@@ -40,22 +41,24 @@
    #"\"" "&quot;"})
 
 (def id-escaped-chars
-  {#"&apos;" "h"
+  {#"'" "h"
    #"\." "_"
    #"\s" "-"})
 
-(def sub-semicolons (partial re-gsub #";" "[SEMICOLON]"))
+(def replace-semicolons (partial re-gsub #";" "[SEMICOLON]"))
 
-(defn sub-escape-chars [escaped-chars string]
+(defn replace-escape-chars [escaped-chars string]
   (loop [cur-string string, cur-escaped-char-seq escaped-chars]
     (if-not (empty? cur-escaped-char-seq)
       (let [[pattern replacement] (first cur-escaped-char-seq)]
-        (recur (re-gsub pattern replacement cur-string)
+        (recur (s/replace cur-string pattern replacement)
                (rest cur-escaped-char-seq)))
       cur-string)))
 
-(def sub-xml-escape-chars (comp (partial sub-escape-chars xml-escaped-chars) sub-semicolons))
-(def sub-id-escape-chars (partial sub-escape-chars id-escaped-chars))
+(def replace-xml-escape-chars
+  (comp (partial replace-escape-chars xml-escaped-chars) replace-semicolons))
+
+(def replace-id-escape-chars (partial replace-escape-chars id-escaped-chars))
 
 (def gismu-columns [[:word 0 6] [:rafsi 7 19] [:keyword 20 39] [:hint 41 60]
                     [:definition 62 158] [:textbook 160 162] [:frequency 163 164]
@@ -69,46 +72,40 @@
 (defn certain-direction-node [from-lang to-lang direction-nodes]
   (some
     (fn [each-node]
-      (let [node-attrs (:attrs each-node)]
+      (let [node-attrs (xml/attrs each-node)]
         (if (and (= (:from node-attrs) from-lang) (= (:to node-attrs) to-lang))
           each-node)))
     direction-nodes))
 
-(defn xml-tag-fn [xml-tag]
+(defn xml-tag-content-fn [xml-tag]
   (fn [xml-node]
-    (= (:tag xml-node) xml-tag)))
+    (if (= (xml/tag xml-node) xml-tag)
+      xml-node)))
+
+(defn parse-vector-content [node-tag valsi-content]
+  (map xml/content (filter (xml-tag-content-fn node-tag) valsi-content)))
+
+(defn parse-definitions [valsi-content]
+  (-> (xml-tag-content-fn :definition) (some valsi-content) xml/content first))
 
 (defn parse-l-to-e [dict-content]
   (let [dict-direction (certain-direction-node "lojban" "English" dict-content)]
-    (for [valsi (:content dict-direction)]
-      (let [attrs (:attrs valsi)
+    (for [valsi (xml/content dict-direction)]
+      (let [attrs (xml/attrs valsi)
             word-type (:type attrs)
             word (:word attrs)
-            content (:content valsi)
-            rafsi (filter (xml-tag-fn "rafsi") content)
-            selmaho (filter (xml-tag-fn "selmaho") content)
-            definition (some (xml-tag-fn "definition") content)
-            notes (some (xml-tag-fn "notes") content)]
-        [word (struct word-s word-type word rafsi selmaho definition notes)]))))
+            content (xml/content valsi)
+            rafsi (parse-vector-content :rafsi content)
+            selmaho (parse-vector-content :selmaho content)
+            definition (parse-definitions content)
+            notes (:content (some (xml-tag-content-fn "notes") content))
+            word-id (replace-id-escape-chars word)]
+        [word-id (struct word-s word-type word rafsi selmaho definition notes)]))))
 
 (defn parse-jbovlaste [source]
   (let [dict-content (:content (xml/parse source))
         l-to-e (parse-l-to-e dict-content)]
     (into {} l-to-e)))
-
-(defn parse-data [[line-seq column-limits word-type]]
-  (into {}
-    (map #(vector (sub-id-escape-chars (get-word %)) %)
-      (for [line line-seq]
-        (let [line-length (count line)]
-          (apply struct-map word-s
-            (concat [:type word-type]
-              (apply concat
-                (for [[key l-column r-column] column-limits :when (< l-column line-length)]
-                  [key
-                   (sub-xml-escape-chars (.trim (if (and r-column (< r-column line-length))
-                                                  (subs line l-column r-column)
-                                                  (subs line l-column))))])))))))))
 
 ; Word origin functions
 
@@ -144,106 +141,114 @@
 
 ; Dump data as Apple dictionary XML.
 
-(defn transform-string [string process]
-  (if (empty? string) "" (process string)))
+(defn dump-xml [word-data etymology-data]
+  ())
 
-(def split-definitions (partial re-split #"\s*\[SEMICOLON\]\s*"))
-;(def split-definitions (partial re-split #"\s*;\s*"))
-(def sub-definition-vars
-  (partial re-gsub #"(x\d)"
-    #(let [variable (get % 1)]
-       (str "<var>" variable "</var>"))))
-(defn split-rafsi [x]
-  (if (= x "") nil (re-split #"\s+" x)))
-(def transform-definitions (partial map (partial format "<li>%s</li>")))
-(def join-definitions (partial str-join "\n"))
-(def remove-bad-indexes (partial remove #(or (nil? %) (= "the" %) (= "" %))))
-(def transform-indexes (partial map (partial format "<d:index d:value=\"%s\"/>")))
-(def split-notes (comp (partial re-gsub #"\[SEMICOLON\]" ";") str))
-
-(defn- prepare-indexes [word keyword rafsi]
-  (let [stripped-word (re-gsub stop-re "" word)
-        keyword-tokens (re-split #"\s+" keyword)]
-    (-> #{word stripped-word keyword} (into keyword-tokens) (into rafsi) remove-bad-indexes
-        transform-indexes join-definitions)))
-
-(defn- prepare-secondary-info [word-datum word rafsi word-type]
-  (let [secondary-info
-        (case word-type
-          "gismu"
-            (cons "rafsi: "
-              (interpose ", " (map #(vector "<strong>" % "</strong>") (cons word rafsi))))
-          "cmavo"
-            (cons "selma'o: " (get-selmaho word-datum)))]
-    (str-flatten [" ( " secondary-info " )"])))
-
-(defn- prepare-definition [string]
-  string)
-;  (-> string sub-definition-vars split-definitions transform-definitions join-definitions))
-
-(defn- prepare-notes [string]
-  (-> string split-notes
-    (transform-string (partial format "<p class=\"note\">%s</p>"))))
-
-(defn- make-etymology-table [etymology-data word]
-  (let [etymologies (etymology-data word)]
-    (if (empty? etymologies)
-      ""
-      (str-flatten
-        ["<h2>Etymologies</h2>\n<table>\n<tr><th>Source language</th><th>Lojbanized word</th><th>Native word</th><th>Word translation</th><th>Comment</th></tr>\n"
-         (map
-          (fn [etymology]
-            (vector "<tr>" (map #(vector "<td>" (val %) "</td>") etymology) "</tr>\n"))
-           etymologies)
-     "</table>\n"]))))
-
-(defn dump-xml [data etymology-data]
-  (println "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
-<d:dictionary xmlns=\"http://www.w3.org/1999/xhtml\"
-  xmlns:d=\"http://www.apple.com/DTDs/DictionaryService-1.0.rng\">
-
-<d:entry id=\"front-back-matter\" d:title=\"(front/back matter)\">
-
-<div class=\"matter\">
-
-<h1>The Lojban Dictionary in English</h1>
-<p>Based on the Jbovlaste dictionary and the word lists from the Logical Language Group of the 1990s.</p>
-<p>Last updated on 2009-06-26.</p>
-<ul>
-
-<li><a href=\"http://www.lojban.org/publications/reference_grammar/chapter1\">The Complete Lojban Language</a></li>
-
-</ul>
-
-</div>
-</d:entry>")
-  
-  (doseq [[word-id word-datum] data]
-    (let [type (get-type word-datum)
-          word (get-word word-datum)
-;          keyword (get-keyword word-datum)
-          rafsi (if (= type "gismu") (get-rafsi word-datum))
-          definition (get-definition word-datum)
-          notes (get-notes word-datum)
-          etymology-table (if (= type "gismu")
-                            (make-etymology-table etymology-data word)
-                            "")]
-      (printf "<d:entry id=\"%s\" d:title=\"%s\">
-
-<h1>%s</h1>
-<p class=\"word-type\">%s%s</p>
-<ul>
-%s
-</ul>
-%s
-%s
-</d:entry>
-"
-        word-id word word type
-;        word-id word (prepare-indexes word keyword rafsi) word type
-        (prepare-secondary-info word-datum word rafsi type) (prepare-definition definition)
-        (prepare-notes notes) etymology-table)))
-  (println "</d:dictionary>"))
+;(defn transform-string [string process]
+;  (if (empty? string) "" (process string)))
+;
+;(def split-definitions (partial re-split #"\s*\[SEMICOLON\]\s*"))
+;;(def split-definitions (partial re-split #"\s*;\s*"))
+;(def replace-definition-vars
+;  (partial s/replace #"\$x\{(\d+)\}\$"
+;    #(let [variable (get % 1)]
+;       (str "<var>x" variable "</var>"))))
+;(defn split-rafsi [x]
+;  (if (= x "") nil (re-split #"\s+" x)))
+;(def transform-definitions (partial map (partial format "<li>%s</li>")))
+;(def join-definitions (partial s/join "\n"))
+;(def remove-bad-indexes (partial remove #(or (nil? %) (= "the" %) (= "" %))))
+;(def transform-indexes (partial map (partial format "<d:index d:value=\"%s\"/>")))
+;(def split-notes (comp (partial re-gsub #"\[SEMICOLON\]" ";") str))
+;
+;(defn- prepare-indexes [word keyword rafsi]
+;  (let [stripped-word (re-gsub stop-re "" word)
+;        keyword-tokens (re-split #"\s+" keyword)]
+;    (-> #{word stripped-word keyword} (into keyword-tokens) (into rafsi) remove-bad-indexes
+;        transform-indexes join-definitions)))
+;
+;(defn- prepare-secondary-info [word-datum word rafsi word-type]
+;  (if-let [secondary-info
+;           (case word-type
+;             "gismu"
+;               (cons "rafsi: "
+;                 (interpose ", " (map #(vector "<strong>" % "</strong>")
+;                                   (cons word rafsi))))
+;             "cmavo"
+;               (cons "selma'o: " (get-selmaho word-datum)))]
+;    (str-flatten [" ( " secondary-info " )"])
+;    ""))
+;
+;(defn- prepare-definition [string]
+;  (-> string
+;    (s/replace #"\$x\{(\d+)\}\$" #(str "<var>x" (get % 1) "</var>"))
+;    (s/split #"\s*;\s*")
+;    transform-definitions
+;    join-definitions))
+;
+;(defn- prepare-notes [string]
+;  (-> string split-notes
+;    (transform-string (partial format "<p class=\"note\">%s</p>"))))
+;
+;(defn- make-etymology-table [etymology-data word]
+;  (let [etymologies (etymology-data word)]
+;    (if (empty? etymologies)
+;      ""
+;      (str-flatten
+;        ["<h2>Etymologies</h2>\n<table>\n<tr><th>Language</th><th>Lojbanized</th><th>Native</th><th>Translation</th><th>Comment</th></tr>\n"
+;         (map
+;          (fn [etymology]
+;            (vector "<tr>" (map #(vector "<td>" (val %) "</td>") etymology) "</tr>\n"))
+;           etymologies)
+;     "</table>\n"]))))
+;
+;(defn dump-xml [data etymology-data]
+;  (println "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+;<d:dictionary xmlns=\"http://www.w3.org/1999/xhtml\"
+;  xmlns:d=\"http://www.apple.com/DTDs/DictionaryService-1.0.rng\">
+;
+;<d:entry id=\"front-back-matter\" d:title=\"(front/back matter)\">
+;
+;<div class=\"matter\">
+;
+;<h1>The Lojban Dictionary in English</h1>
+;<p>Based on the Jbovlaste dictionary and the word lists from the Logical Language Group of the 1990s.</p>
+;<p>Last updated on 2009-06-26.</p>
+;<ul>
+;
+;<li><a href=\"http://www.lojban.org/publications/reference_grammar/chapter1\">The Complete Lojban Language</a></li>
+;
+;</ul>
+;
+;</div>
+;</d:entry>")
+;  
+;  (doseq [[word-id word-datum] data]
+;    (let [type (get-type word-datum)
+;          word (get-word word-datum)
+;;          keyword (get-keyword word-datum)
+;          rafsi (if (= type "gismu") (get-rafsi word-datum))
+;          definition (get-definition word-datum)
+;          notes (get-notes word-datum)
+;          etymology-table (if (= type "gismu")
+;                            (make-etymology-table etymology-data word)
+;                            "")]
+;      (printf "<d:entry id=\"%s\" d:title=\"%s\">
+;
+;<h1>%s</h1>
+;<p class=\"word-type\">%s%s</p>
+;<ul>
+;%s
+;</ul>
+;%s
+;%s
+;</d:entry>
+;"
+;        word-id word word type
+;;        word-id word (prepare-indexes word keyword rafsi) word type
+;        (prepare-secondary-info word-datum word rafsi type) (prepare-definition definition)
+;        (prepare-notes notes) etymology-table)))
+;  (println "</d:dictionary>"))
 
 (defn main- []
   (let [; This is where the word data is read from the Jbovlaste XML dump.
