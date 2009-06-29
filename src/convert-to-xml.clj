@@ -1,6 +1,7 @@
 ; This script was last used with Clojure 1.0
 
 ; java -cp /Users/joshuachoi/Development/clojure/clojure-1.0.0.jar:/Users/joshuachoi/Development/clojure-contrib/clojure-contrib.jar:../FnParse/src/:./src/:./test/ clojure.main src/convert-to-xml.clj | tee src/Lojban-English.xml
+; java -jar ~/Development/jing/bin/jing.jar /Developer/Extras/Dictionary\ Development\ Kit/documents/DictionarySchema/AppleDictionarySchema.rng src/Lojban-English.xml
 ; cd src; make; make install; make clean; cd ..
 
 (use 'clojure.contrib.duck-streams)
@@ -108,45 +109,7 @@
 
 ; Front/back matter functions.
 
-(def head-end-r (re-term #"\s*<div class=\"centered\">\s*"))
-;(def r-chopped-head (rep* anything))
-(def chopped-head-r (rep* (except anything head-end-r)))
-(def body-end-r (conc (re-term #"\s*</body>\s*") (re-term #"\s*</html>\s*")))
-(def body-r (rep+ (except anything body-end-r)))
-
-(def r-chapter-body
-;  (conc (rep* r-chopped-head) r-head-end r-body-end))
-  (complex [_ chopped-head-r
-            _ head-end-r
-            text body-r
-            _ body-end-r]
-    text))
-
-(defn load-reference-grammar-chapter [chapter-num]
-  (rule-match r-chapter-body
-    (fn [_] (throw (Exception. (str "Reference grammar chapter " chapter-num " invalid"))))
-    (fn [_ _] (throw (Exception. (str "Extra stuff in ref chap " chapter-num))))
-    {:remainder (read-lines (str "src/hrefgram/chapter" chapter-num ".html"))}))
-
-(def dec-headings
-  (comp (partial re-gsub #"<h(\d+)>"
-          #(let [level (-> % (get 1) Integer/parseInt dec)] (str "<h" level ">")))
-        (partial re-gsub #"</h(\d+)>"
-          #(let [level (-> % (get 1) Integer/parseInt dec)] (str "<h" level ">")))))
-
-(defn surround-chapter [lines chapter-num]
-  (concat
-    [(format "<d:entry id=\"grammar-chapter-%s\" d:title=\"Grammar Chapter %s\">\n"
-       chapter-num chapter-num)]
-    lines
-    ["\n</d:entry>"]))
-
-(defn process-reference-grammar-chapter [chapter-num]
-  (-> chapter-num load-reference-grammar-chapter (surround-chapter chapter-num)
-    ((partial interpose "\n")) apply-str dec-headings))
-
-(defn process-reference-grammar [chapter-nums]
-  (map process-reference-grammar-chapter chapter-nums))
+; NONE
 
 ; Dump data as Apple dictionary XML.
 
@@ -203,14 +166,25 @@
      "</table>\n"]))))
 
 (defn dump-xml [data etymology-data grammar-text]
-  (println "<?xml version=\"1.0\" encoding=\"UTF-8\"?>")
-  (println "<d:dictionary xmlns=\"http://www.w3.org/1999/xhtml\"")
-  (println "  xmlns:d=\"http://www.apple.com/DTDs/DictionaryService-1.0.rng\">\n")
-  
-  (println "<d:entry id=\"front-back-matter\" d:title=\"(front/back matter)\">")
-  (println "<h1>The Lojban Dictionary in English</h1>")
-  (println "<p>Based on the word lists from the Logical Language Group of the 1990s</p>")
-  (println "</d:entry>")
+  (println "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<d:dictionary xmlns=\"http://www.w3.org/1999/xhtml\"
+  xmlns:d=\"http://www.apple.com/DTDs/DictionaryService-1.0.rng\">
+
+<d:entry id=\"front-back-matter\" d:title=\"(front/back matter)\">
+
+<div class=\"matter\">
+
+<h1>The Lojban Dictionary in English</h1>
+<p>Based on the Jbovlaste dictionary and the word lists from the Logical Language Group of the 1990s.</p>
+<p>Last updated on 2009-06-26.</p>
+<ul>
+
+<li><a href=\"http://www.lojban.org/publications/reference_grammar/chapter1\">The Complete Lojban Language</a></li>
+
+</ul>
+
+</div>
+</d:entry>")
   (apply println grammar-text)
   
   (doseq [[word-id word-datum] data]
