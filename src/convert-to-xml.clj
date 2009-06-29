@@ -165,7 +165,7 @@
            etymologies)
      "</table>\n"]))))
 
-(defn dump-xml [data etymology-data grammar-text]
+(defn dump-xml [data etymology-data]
   (println "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
 <d:dictionary xmlns=\"http://www.w3.org/1999/xhtml\"
   xmlns:d=\"http://www.apple.com/DTDs/DictionaryService-1.0.rng\">
@@ -185,7 +185,6 @@
 
 </div>
 </d:entry>")
-  (apply println grammar-text)
   
   (doseq [[word-id word-datum] data]
     (let [type (get-type word-datum)
@@ -227,12 +226,9 @@
         ; This is where the word origin data is read.
         etymology-data (parse-languages)
         
-        ; This is where the reference grammar is read.
-        reference-grammar (process-reference-grammar (range 1 22))
-        
         ]
 
-    (dump-xml word-data etymology-data reference-grammar)
+    (dump-xml word-data etymology-data)
     ))
 
 (main-)
