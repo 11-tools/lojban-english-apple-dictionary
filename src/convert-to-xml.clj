@@ -49,7 +49,6 @@
 (def replace-semicolons (partial re-gsub #";" "[SEMICOLON]"))
 
 (defn replace-escape-chars [escaped-chars string]
-;  (println ">" string)
   (if string
     (loop [cur-string string, cur-escaped-char-seq escaped-chars]
       (if-not (empty? cur-escaped-char-seq)
@@ -62,15 +61,6 @@
   (comp (partial replace-escape-chars xml-escaped-chars) replace-semicolons))
 
 (def replace-id-escape-chars (partial replace-escape-chars id-escaped-chars))
-
-(def gismu-columns [[:word 0 6] [:rafsi 7 19] [:keyword 20 39] [:hint 41 60]
-                    [:definition 62 158] [:textbook 160 162] [:frequency 163 164]
-                    [:notes 165 nil]])
-
-(def cmavo-columns [[:word 0 10] [:selmaho 11 19] [:keyword 20 61] [:definition 62 167]
-                    [:notes 168 nil]])
-
-; {:tag :dictionary, :attrs nil, :content [{:tag :direction, :attrs {:from "lojban", :to "English"}, :content [{:tag :valsi, :attrs {:word "LIEtuvas", :type "cmene"}, :content [{:tag :definition, :attrs nil, :content ["Lithuania."]}]} {:tag :valsi, :attrs {:word "SINgapur", :type "cmene"}, :content [{:tag :definition, :attrs nil, :content ["Singapore."]}]} {:tag :valsi, :attrs {:word "VLANDeren", :type "cmene"}, :content [{:tag :definition, :attrs nil, :content ["Flanders."]}]} ... } ...]}
 
 (defn certain-direction-node [from-lang to-lang direction-nodes]
   (some
@@ -86,7 +76,7 @@
       xml-node)))
 
 (defn parse-vector-content [node-tag valsi-content]
-  (map xml/content (filter (xml-tag-content-fn node-tag) valsi-content)))
+  (map (comp first xml/content) (filter (xml-tag-content-fn node-tag) valsi-content)))
 
 (defn parse-definitions [valsi-content]
   (-> (xml-tag-content-fn :definition) (some valsi-content) xml/content first))
