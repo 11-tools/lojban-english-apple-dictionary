@@ -22,6 +22,7 @@
 (def get-rafsi (accessor word-s :rafsi))
 (def get-definition (accessor word-s :definition))
 (def get-notes (accessor word-s :notes))
+(def get-keywords (accessor word-s :keywords))
 (def get-language (accessor etymology-s :language))
 
 (def apply-str (partial apply str))
@@ -53,15 +54,15 @@
   (-> (xml-tag-content-fn :definition) (some valsi-content) xml/content first))
 
 (defn parse-e-to-l [dict-content]
-  (let [dict-direction (certain-direction-node "English" "lojban")]
+  (let [dict-direction (certain-direction-node "English" "lojban" dict-content)]
     (for [nlword (xml/content dict-direction)]
       (let [attrs (xml/attrs nlword)
             word (:word attrs)
             valsi (:valsi attrs)
             sense (:sense attrs)]
-        [valsi (apply str word (if sense ["(" sense ")"]))]))))
+        [valsi (apply str word (if sense [" (" sense ")"]))]))))
 
-(defn parse-l-to-e [dict-content]
+(defn parse-l-to-e [dict-content gloss-words]
   (let [dict-direction (certain-direction-node "lojban" "English" dict-content)]
     (for [valsi (xml/content dict-direction)]
       (let [attrs (xml/attrs valsi)
@@ -71,15 +72,14 @@
             rafsi (parse-vector-content :rafsi content)
             selmaho (parse-vector-content :selmaho content)
             definition (parse-definitions content)
-            notes (:content (some (xml-tag-content-fn "notes") content))]
-        [word (struct word-s word-type rafsi selmaho definition notes)]))))
+            notes (:content (some (xml-tag-content-fn "notes") content))
+            keywords (gloss-words word)]
+        [word (struct word-s word-type rafsi selmaho definition notes keywords)]))))
 
 (defn parse-jbovlaste [source]
   (let [dict-content (:content (xml/parse source))
-;        e-to-l (parse-e-to-l dict-content)
-        l-to-e (parse-l-to-e dict-content)]
-;    (println e-to-l)
-;    (throw (Exception.))
+        e-to-l (-> dict-content parse-e-to-l map-from-pairs)
+        l-to-e (parse-l-to-e dict-content e-to-l)]
     (into {} l-to-e)))
 
 ; Word origin functions
@@ -175,9 +175,9 @@
 (def split-notes
   (comp (partial re-gsub #"\[SEMICOLON\]" ";") str))
 
-(defn- prepare-indexes [word keyword rafsi]
+(defn- prepare-indexes [word keywords rafsi]
   (let [stripped-word (re-gsub stop-re "" word)]
-    (-> #{word stripped-word} (into rafsi) remove-bad-indexes
+    (-> #{word stripped-word} (into rafsi) (into keywords) remove-bad-indexes
         transform-indexes join-definitions)))
 ;(defn- prepare-indexes [word keyword rafsi]
 ;  (let [stripped-word (re-gsub stop-re "" word)
@@ -239,7 +239,7 @@
           word-datum (data-pair 1)
           type (get-type word-datum)
           word-id (replace-id-escape-chars word)
-;          keyword (get-keyword word-datum)
+          keywords (get-keywords word-datum)
           rafsi (if (= type "gismu") (get-rafsi word-datum))
           definition (-> word-datum get-definition replace-xml-escape-chars)
           notes (get-notes word-datum)
@@ -257,9 +257,7 @@
 %s
 </d:entry>
 "
-;        word-id word word type
-        word-id word (prepare-indexes word nil rafsi) word type
-;        word-id word (prepare-indexes word keyword rafsi) word type
+        word-id word (prepare-indexes word keywords rafsi) word type
         (prepare-secondary-info word-datum word rafsi type) (prepare-definition definition)
         (prepare-notes notes) etymology-table)))
   (println "</d:dictionary>"))
