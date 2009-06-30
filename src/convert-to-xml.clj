@@ -15,10 +15,9 @@
 
 (def stop-re #"\.")
 
-(defstruct word-s :type :word :rafsi :selmaho :definition :notes :keywords :etymologies)
+(defstruct word-s :type :rafsi :selmaho :definition :notes :keywords :etymologies)
 (defstruct etymology-s :language :lojbanized :natives :transliteration :comment)
 (def get-type (accessor word-s :type))
-(def get-word (accessor word-s :word))
 (def get-selmaho (accessor word-s :selmaho))
 (def get-rafsi (accessor word-s :rafsi))
 (def get-definition (accessor word-s :definition))
@@ -73,7 +72,7 @@
             selmaho (parse-vector-content :selmaho content)
             definition (parse-definitions content)
             notes (:content (some (xml-tag-content-fn "notes") content))]
-        [word (struct word-s word-type word rafsi selmaho definition notes)]))))
+        [word (struct word-s word-type rafsi selmaho definition notes)]))))
 
 (defn parse-jbovlaste [source]
   (let [dict-content (:content (xml/parse source))
@@ -235,8 +234,10 @@
 </div>
 </d:entry>")
   
-  (doseq [[word word-datum] data]
-    (let [type (get-type word-datum)
+  (doseq [data-pair data]
+    (let [word (data-pair 0)
+          word-datum (data-pair 1)
+          type (get-type word-datum)
           word-id (replace-id-escape-chars word)
 ;          keyword (get-keyword word-datum)
           rafsi (if (= type "gismu") (get-rafsi word-datum))
