@@ -42,18 +42,21 @@
 
 (def id-escaped-chars
   {#"'" "h"
+   #"," "-"
    #"\." "_"
-   #"\s" "-"})
+   #"\s" "--"})
 
 (def replace-semicolons (partial re-gsub #";" "[SEMICOLON]"))
 
 (defn replace-escape-chars [escaped-chars string]
-  (loop [cur-string string, cur-escaped-char-seq escaped-chars]
-    (if-not (empty? cur-escaped-char-seq)
-      (let [[pattern replacement] (first cur-escaped-char-seq)]
-        (recur (s/replace cur-string pattern replacement)
-               (rest cur-escaped-char-seq)))
-      cur-string)))
+;  (println ">" string)
+  (if string
+    (loop [cur-string string, cur-escaped-char-seq escaped-chars]
+      (if-not (empty? cur-escaped-char-seq)
+        (let [[pattern replacement] (first cur-escaped-char-seq)]
+          (recur (s/replace cur-string pattern replacement)
+                 (rest cur-escaped-char-seq)))
+        cur-string))))
 
 (def replace-xml-escape-chars
   (comp (partial replace-escape-chars xml-escaped-chars) replace-semicolons))
@@ -97,8 +100,9 @@
             content (xml/content valsi)
             rafsi (parse-vector-content :rafsi content)
             selmaho (parse-vector-content :selmaho content)
-            definition (parse-definitions content)
-            notes (:content (some (xml-tag-content-fn "notes") content))
+            definition (replace-xml-escape-chars (parse-definitions content))
+            notes (identity ; replace-xml-escape-chars
+                    (:content (some (xml-tag-content-fn "notes") content)))
             word-id (replace-id-escape-chars word)]
         [word-id (struct word-s word-type word rafsi selmaho definition notes)]))))
 
@@ -141,114 +145,122 @@
 
 ; Dump data as Apple dictionary XML.
 
-(defn dump-xml [word-data etymology-data]
-  ())
+(defn transform-string [string process]
+  (if (empty? string) "" (process string)))
 
-;(defn transform-string [string process]
-;  (if (empty? string) "" (process string)))
-;
-;(def split-definitions (partial re-split #"\s*\[SEMICOLON\]\s*"))
-;;(def split-definitions (partial re-split #"\s*;\s*"))
-;(def replace-definition-vars
-;  (partial s/replace #"\$x\{(\d+)\}\$"
-;    #(let [variable (get % 1)]
-;       (str "<var>x" variable "</var>"))))
-;(defn split-rafsi [x]
-;  (if (= x "") nil (re-split #"\s+" x)))
-;(def transform-definitions (partial map (partial format "<li>%s</li>")))
-;(def join-definitions (partial s/join "\n"))
-;(def remove-bad-indexes (partial remove #(or (nil? %) (= "the" %) (= "" %))))
-;(def transform-indexes (partial map (partial format "<d:index d:value=\"%s\"/>")))
-;(def split-notes (comp (partial re-gsub #"\[SEMICOLON\]" ";") str))
-;
+;(def split-definitions vector)
+(def split-definitions (partial re-split #"\s*\[SEMICOLON\]\s*"))
+(def replace-definition-vars
+  (partial re-gsub #"\$x\{(\d+)\}\$"
+    #(let [variable (get % 1)]
+       (str "<var>x" variable "</var>"))))
+(defn split-rafsi [x]
+  (if (= x "") nil (re-split #"\s+" x)))
+(def transform-definitions
+  (partial map (partial format "<li>%s</li>")))
+(def join-definitions
+  (partial s/join "\n"))
+
+(defn- prepare-definition [string]
+  (-> string
+    replace-definition-vars
+    split-definitions
+    transform-definitions
+    join-definitions))
+
+(def remove-bad-indexes
+  (partial remove #(or (nil? %) (= "the" %) (= "" %))))
+(def transform-indexes
+  (partial map (partial format "<d:index d:value=\"%s\"/>")))
+(def split-notes
+  (comp (partial re-gsub #"\[SEMICOLON\]" ";") str))
+
+(defn- prepare-indexes [word keyword rafsi]
+  (let [stripped-word (re-gsub stop-re "" word)]
+    (-> #{word stripped-word} (into rafsi) remove-bad-indexes
+        transform-indexes join-definitions)))
 ;(defn- prepare-indexes [word keyword rafsi]
 ;  (let [stripped-word (re-gsub stop-re "" word)
 ;        keyword-tokens (re-split #"\s+" keyword)]
 ;    (-> #{word stripped-word keyword} (into keyword-tokens) (into rafsi) remove-bad-indexes
 ;        transform-indexes join-definitions)))
-;
-;(defn- prepare-secondary-info [word-datum word rafsi word-type]
-;  (if-let [secondary-info
-;           (case word-type
-;             "gismu"
-;               (cons "rafsi: "
-;                 (interpose ", " (map #(vector "<strong>" % "</strong>")
-;                                   (cons word rafsi))))
-;             "cmavo"
-;               (cons "selma'o: " (get-selmaho word-datum)))]
-;    (str-flatten [" ( " secondary-info " )"])
-;    ""))
-;
-;(defn- prepare-definition [string]
-;  (-> string
-;    (s/replace #"\$x\{(\d+)\}\$" #(str "<var>x" (get % 1) "</var>"))
-;    (s/split #"\s*;\s*")
-;    transform-definitions
-;    join-definitions))
-;
-;(defn- prepare-notes [string]
-;  (-> string split-notes
-;    (transform-string (partial format "<p class=\"note\">%s</p>"))))
-;
-;(defn- make-etymology-table [etymology-data word]
-;  (let [etymologies (etymology-data word)]
-;    (if (empty? etymologies)
-;      ""
-;      (str-flatten
-;        ["<h2>Etymologies</h2>\n<table>\n<tr><th>Language</th><th>Lojbanized</th><th>Native</th><th>Translation</th><th>Comment</th></tr>\n"
-;         (map
-;          (fn [etymology]
-;            (vector "<tr>" (map #(vector "<td>" (val %) "</td>") etymology) "</tr>\n"))
-;           etymologies)
-;     "</table>\n"]))))
-;
-;(defn dump-xml [data etymology-data]
-;  (println "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
-;<d:dictionary xmlns=\"http://www.w3.org/1999/xhtml\"
-;  xmlns:d=\"http://www.apple.com/DTDs/DictionaryService-1.0.rng\">
-;
-;<d:entry id=\"front-back-matter\" d:title=\"(front/back matter)\">
-;
-;<div class=\"matter\">
-;
-;<h1>The Lojban Dictionary in English</h1>
-;<p>Based on the Jbovlaste dictionary and the word lists from the Logical Language Group of the 1990s.</p>
-;<p>Last updated on 2009-06-26.</p>
-;<ul>
-;
-;<li><a href=\"http://www.lojban.org/publications/reference_grammar/chapter1\">The Complete Lojban Language</a></li>
-;
-;</ul>
-;
-;</div>
-;</d:entry>")
-;  
-;  (doseq [[word-id word-datum] data]
-;    (let [type (get-type word-datum)
-;          word (get-word word-datum)
-;;          keyword (get-keyword word-datum)
-;          rafsi (if (= type "gismu") (get-rafsi word-datum))
-;          definition (get-definition word-datum)
-;          notes (get-notes word-datum)
-;          etymology-table (if (= type "gismu")
-;                            (make-etymology-table etymology-data word)
-;                            "")]
-;      (printf "<d:entry id=\"%s\" d:title=\"%s\">
-;
-;<h1>%s</h1>
-;<p class=\"word-type\">%s%s</p>
-;<ul>
-;%s
-;</ul>
-;%s
-;%s
-;</d:entry>
-;"
+
+(defn- prepare-secondary-info [word-datum word rafsi word-type]
+  (if-let [secondary-info
+           (case word-type
+             "gismu"
+               (cons "rafsi: "
+                 (interpose ", " (map #(vector "<strong>" % "</strong>")
+                                   (cons word rafsi))))
+             "cmavo"
+               (cons "selma'o: " (get-selmaho word-datum)))]
+    (str-flatten [" ( " secondary-info " )"])
+    ""))
+
+(defn- prepare-notes [string]
+  (-> string split-notes
+    (transform-string (partial format "<p class=\"note\">%s</p>"))))
+
+(defn- make-etymology-table [etymology-data word]
+  (let [etymologies (etymology-data word)]
+    (if (empty? etymologies)
+      ""
+      (str-flatten
+        ["<h2>Etymologies</h2>\n<table>\n<tr><th>Language</th><th>Lojbanized</th><th>Native</th><th>Translation</th><th>Comment</th></tr>\n"
+         (map
+          (fn [etymology]
+            (vector "<tr>" (map #(vector "<td>" (val %) "</td>") etymology) "</tr>\n"))
+           etymologies)
+     "</table>\n"]))))
+
+(defn dump-xml [data etymology-data]
+  (println "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<d:dictionary xmlns=\"http://www.w3.org/1999/xhtml\"
+  xmlns:d=\"http://www.apple.com/DTDs/DictionaryService-1.0.rng\">
+
+<d:entry id=\"front-back-matter\" d:title=\"(front/back matter)\">
+
+<div class=\"matter\">
+
+<h1>The Lojban Dictionary in English</h1>
+<p>Based on the Jbovlaste dictionary and the word lists from the Logical Language Group of the 1990s.</p>
+<p>Last updated on 2009-06-26.</p>
+<ul>
+
+<li><a href=\"http://www.lojban.org/publications/reference_grammar/chapter1\">The Complete Lojban Language</a></li>
+
+</ul>
+
+</div>
+</d:entry>")
+  
+  (doseq [[word-id word-datum] data]
+    (let [type (get-type word-datum)
+          word (get-word word-datum)
+;          keyword (get-keyword word-datum)
+          rafsi (if (= type "gismu") (get-rafsi word-datum))
+          definition (get-definition word-datum)
+          notes (get-notes word-datum)
+          etymology-table (if (= type "gismu")
+                            (make-etymology-table etymology-data word)
+                            "")]
+      (printf "<d:entry id=\"%s\" d:title=\"%s\">
+%s
+<h1>%s</h1>
+<p class=\"word-type\">%s%s</p>
+<ul>
+%s
+</ul>
+%s
+%s
+</d:entry>
+"
 ;        word-id word word type
-;;        word-id word (prepare-indexes word keyword rafsi) word type
-;        (prepare-secondary-info word-datum word rafsi type) (prepare-definition definition)
-;        (prepare-notes notes) etymology-table)))
-;  (println "</d:dictionary>"))
+        word-id word (prepare-indexes word nil rafsi) word type
+;        word-id word (prepare-indexes word keyword rafsi) word type
+        (prepare-secondary-info word-datum word rafsi type) (prepare-definition definition)
+        (prepare-notes notes) etymology-table)))
+  (println "</d:dictionary>"))
 
 (defn main- []
   (let [; This is where the word data is read from the Jbovlaste XML dump.
