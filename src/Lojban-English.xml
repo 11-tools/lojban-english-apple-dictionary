@@ -2197,7 +2197,7 @@
 </d:entry>
 <d:entry id="selxarkei" d:title="selxarkei">
 <d:index d:value="selxarkei"/>
-<d:index d:value="pretend (as in 'plays at pretending')"/>
+<d:index d:value="pretend (as in &apos;plays at pretending&apos;)"/>
 <h1>selxarkei</h1>
 <p class="word-type">lujvo</p>
 <ul>
@@ -13429,8 +13429,8 @@
 
 </d:entry>
 <d:entry id="leta" d:title="leta">
+<d:index d:value="that one&apos;s"/>
 <d:index d:value="leta"/>
-<d:index d:value="that one's"/>
 <h1>leta</h1>
 <p class="word-type">cmavo cluster</p>
 <ul>
@@ -20007,7 +20007,7 @@
 </d:entry>
 <d:entry id="dirtadji" d:title="dirtadji">
 <d:index d:value="dirtadji"/>
-<d:index d:value="interrupt (signal that causes a computer's CPU to temporarily leave the normal flow of execution)"/>
+<d:index d:value="interrupt (signal that causes a computer&apos;s CPU to temporarily leave the normal flow of execution)"/>
 <h1>dirtadji</h1>
 <p class="word-type">lujvo</p>
 <ul>
@@ -23466,12 +23466,12 @@
 
 </d:entry>
 <d:entry id="ctecmocpi" d:title="ctecmocpi">
-<d:index d:value="chuck-will's-widow"/>
 <d:index d:value="nightjar"/>
 <d:index d:value="ctecmocpi"/>
 <d:index d:value="whippoorwill"/>
 <d:index d:value="goatsucker"/>
 <d:index d:value="poorwill"/>
+<d:index d:value="chuck-will&apos;s-widow"/>
 <h1>ctecmocpi</h1>
 <p class="word-type">lujvo</p>
 <ul>
@@ -24728,7 +24728,7 @@
 
 </d:entry>
 <d:entry id="yhy" d:title="y'y">
-<d:index d:value="'"/>
+<d:index d:value="&apos;"/>
 <d:index d:value="y'y"/>
 <h1>y'y</h1>
 <p class="word-type">cmavo ( selma'o: BY2 )</p>
@@ -29909,8 +29909,8 @@
 
 </d:entry>
 <d:entry id="leti" d:title="leti">
+<d:index d:value="this one&apos;s"/>
 <d:index d:value="leti"/>
-<d:index d:value="this one's"/>
 <h1>leti</h1>
 <p class="word-type">cmavo cluster</p>
 <ul>
@@ -30592,9 +30592,9 @@
 
 </d:entry>
 <d:entry id="norvaismu" d:title="norvaismu">
-<d:index d:value="an aside, a not important expression; an obscure interpretation of"/>
 <d:index d:value="obscure interpretation (unimportant)"/>
 <d:index d:value="norvaismu"/>
+<d:index d:value="an aside, a not important expression[SEMICOLON] an obscure interpretation of"/>
 <h1>norvaismu</h1>
 <p class="word-type">lujvo</p>
 <ul>
@@ -37568,8 +37568,8 @@
 
 </d:entry>
 <d:entry id="kisybau" d:title="kisybau">
-<d:index d:value="Urdu ('national' language of Pakistan)"/>
 <d:index d:value="kisybau"/>
+<d:index d:value="Urdu (&apos;national&apos; language of Pakistan)"/>
 <h1>kisybau</h1>
 <p class="word-type">lujvo</p>
 <ul>
@@ -38896,8 +38896,8 @@
 
 </d:entry>
 <d:entry id="uhe" d:title="u'e">
-<d:index d:value="wonder (feeling awe; attitudinal)"/>
 <d:index d:value="u'e"/>
+<d:index d:value="wonder (feeling awe[SEMICOLON] attitudinal)"/>
 <h1>u'e</h1>
 <p class="word-type">cmavo ( selma'o: UI1 )</p>
 <ul>
@@ -39384,7 +39384,7 @@
 <d:index d:value="Copper  Pheasant"/>
 <d:index d:value="Yama-dori"/>
 <d:index d:value="ma'arjipci"/>
-<d:index d:value="Soemmerring's Pheasant"/>
+<d:index d:value="Soemmerring&apos;s Pheasant"/>
 <h1>ma'arjipci</h1>
 <p class="word-type">lujvo</p>
 <ul>
@@ -44780,8 +44780,8 @@
 
 </d:entry>
 <d:entry id="farjaho" d:title="farja'o">
-<d:index d:value="to indicate something; [point]"/>
 <d:index d:value="farja'o"/>
+<d:index d:value="to indicate something[SEMICOLON] [point]"/>
 <d:index d:value="show direction"/>
 <h1>farja'o</h1>
 <p class="word-type">lujvo</p>
@@ -47144,9 +47144,9 @@
 </d:entry>
 <d:entry id="miltre" d:title="miltre">
 <d:index d:value="millimeter standard"/>
+<d:index d:value="size [in millimeters][SEMICOLON] number of millimeters"/>
 <d:index d:value="millimeters direction"/>
 <d:index d:value="miltre"/>
-<d:index d:value="size [in millimeters]; number of millimeters"/>
 <d:index d:value="millimeter"/>
 <h1>miltre</h1>
 <p class="word-type">lujvo</p>
@@ -47224,7 +47224,7 @@
 
 </d:entry>
 <d:entry id="ninynahadetri" d:title="ninyna'adetri">
-<d:index d:value="New Year's Day"/>
+<d:index d:value="New Year&apos;s Day"/>
 <d:index d:value="ninyna'adetri"/>
 <h1>ninyna'adetri</h1>
 <p class="word-type">lujvo</p>
@@ -47633,8 +47633,8 @@
 
 </d:entry>
 <d:entry id="lekoha" d:title="leko'a">
+<d:index d:value="it-1&apos;s described as"/>
 <d:index d:value="leko'a"/>
-<d:index d:value="it-1's described as"/>
 <h1>leko'a</h1>
 <p class="word-type">cmavo cluster</p>
 <ul>
@@ -47815,8 +47815,8 @@
 
 </d:entry>
 <d:entry id="joibu" d:title="joibu">
-<d:index d:value="&"/>
 <d:index d:value="joibu"/>
+<d:index d:value="&amp;"/>
 <h1>joibu</h1>
 <p class="word-type">cmavo cluster</p>
 <ul>
@@ -51434,8 +51434,8 @@
 
 </d:entry>
 <d:entry id="tacpehu" d:title="tacpe'u">
+<d:index d:value="lick (touch with one&apos;s tounge)"/>
 <d:index d:value="tacpe'u"/>
-<d:index d:value="lick (touch with one's tounge)"/>
 <h1>tacpe'u</h1>
 <p class="word-type">lujvo</p>
 <ul>
@@ -52909,7 +52909,7 @@
 
 </d:entry>
 <d:entry id="spatrdauko" d:title="spatrdauko">
-<d:index d:value="Queen Anne's lace"/>
+<d:index d:value="Queen Anne&apos;s lace"/>
 <d:index d:value="spatrdauko"/>
 <h1>spatrdauko</h1>
 <p class="word-type">fu'ivla</p>
@@ -53203,8 +53203,8 @@
 
 </d:entry>
 <d:entry id="letu" d:title="letu">
+<d:index d:value="the yonder one&apos;s"/>
 <d:index d:value="letu"/>
-<d:index d:value="the yonder one's"/>
 <h1>letu</h1>
 <p class="word-type">cmavo cluster</p>
 <ul>
@@ -53696,8 +53696,8 @@
 
 </d:entry>
 <d:entry id="cipyple" d:title="cipyple">
+<d:index d:value="subject[SEMICOLON]testpaper subject"/>
 <d:index d:value="proof of"/>
-<d:index d:value="subject;testpaper subject"/>
 <d:index d:value="testpaper"/>
 <d:index d:value="cipyple"/>
 <h1>cipyple</h1>
@@ -56422,7 +56422,7 @@
 
 </d:entry>
 <d:entry id="cpizda" d:title="cpizda">
-<d:index d:value="bird's nest"/>
+<d:index d:value="bird&apos;s nest"/>
 <d:index d:value="cpizda"/>
 <h1>cpizda</h1>
 <p class="word-type">lujvo</p>
@@ -60073,7 +60073,7 @@
 
 </d:entry>
 <d:entry id="jetkahu" d:title="jetka'u">
-<d:index d:value="bit [binary digit; computer unit]"/>
+<d:index d:value="bit [binary digit[SEMICOLON] computer unit]"/>
 <d:index d:value="jetka'u"/>
 <h1>jetka'u</h1>
 <p class="word-type">lujvo</p>
@@ -61623,8 +61623,8 @@
 </d:entry>
 <d:entry id="nebykaha" d:title="nebyka'a">
 <d:index d:value="beheaded"/>
+<d:index d:value="executioner&apos;s axe"/>
 <d:index d:value="nebyka'a"/>
-<d:index d:value="executioner's axe"/>
 <h1>nebyka'a</h1>
 <p class="word-type">lujvo</p>
 <ul>

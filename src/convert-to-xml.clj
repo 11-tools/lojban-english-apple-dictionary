@@ -239,7 +239,7 @@
           word-datum (data-pair 1)
           type (get-type word-datum)
           word-id (replace-id-escape-chars word)
-          keywords (get-keywords word-datum)
+          keywords (map replace-xml-escape-chars (get-keywords word-datum))
           rafsi (if (= type "gismu") (get-rafsi word-datum))
           definition (-> word-datum get-definition replace-xml-escape-chars)
           notes (get-notes word-datum)
