@@ -51,7 +51,9 @@
   (map (comp first xml/content) (filter (xml-tag-content-fn node-tag) valsi-content)))
 
 (defn parse-single-content [node-tag valsi-content]
-  (-> (xml-tag-content-fn :definition) (some valsi-content) xml/content first))
+  (let [node (-> node-tag xml-tag-content-fn (some valsi-content))]
+    (if node
+      (-> node xml/content first))))
 
 (defn parse-e-to-l [dict-content]
   (let [dict-direction (certain-direction-node "English" "lojban" dict-content)]
@@ -110,11 +112,12 @@
 ; XML escape character functions.
 
 (def xml-escaped-chars
-  {#"<" "&lt;"
-   #">" "&gt;"
-   #"&" "&amp;"
-   #"'" "&apos;"
-   #"\"" "&quot;"})
+  [[#";" "[SEMICOLON]"]
+   [#"<" "&lt;"]
+   [#">" "&gt;"]
+   [#"&" "&amp;"]
+   [#"'" "&apos;"]
+   [#"\"" "&quot;"]])
 
 (def id-escaped-chars
   {#"'" "h"
@@ -127,14 +130,15 @@
 (defn replace-escape-chars [escaped-chars string]
   (if string
     (loop [cur-string string, cur-escaped-char-seq escaped-chars]
-      (if-not (empty? cur-escaped-char-seq)
-        (let [[pattern replacement] (first cur-escaped-char-seq)]
+      (if (seq cur-escaped-char-seq)
+        (let [esc-pair (first cur-escaped-char-seq)
+              pattern (esc-pair 0)
+              replacement (esc-pair 1)]
           (recur (s/replace cur-string pattern replacement)
                  (rest cur-escaped-char-seq)))
         cur-string))))
 
-(def replace-xml-escape-chars
-  (comp (partial replace-escape-chars xml-escaped-chars) replace-semicolons))
+(def replace-xml-escape-chars (partial replace-escape-chars xml-escaped-chars))
 
 (def replace-id-escape-chars (partial replace-escape-chars id-escaped-chars))
 
@@ -242,7 +246,7 @@
           keywords (map replace-xml-escape-chars (get-keywords word-datum))
           rafsi (if (= type "gismu") (get-rafsi word-datum))
           definition (-> word-datum get-definition replace-xml-escape-chars)
-          notes (get-notes word-datum)
+          notes (-> word-datum get-notes replace-xml-escape-chars)
           etymology-table (if (= type "gismu")
                             (make-etymology-table etymology-data word)
                             "")]
