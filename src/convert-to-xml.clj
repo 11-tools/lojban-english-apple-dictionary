@@ -26,12 +26,89 @@
 (def get-language (accessor etymology-s :language))
 
 (def apply-str (partial apply str))
+
 (def str-flatten (comp apply-str flatten))
 
 (defn map-from-pairs [pairs]
   (reduce (fn [a-map [k v]] (assoc a-map k (conj (get a-map k []) v))) {} pairs))
 
 ; Word data functions
+
+(defn certain-direction-node [from-lang to-lang direction-nodes]
+  (some
+    (fn [each-node]
+      (let [node-attrs (xml/attrs each-node)]
+        (if (and (= (:from node-attrs) from-lang) (= (:to node-attrs) to-lang))
+          each-node)))
+    direction-nodes))
+
+(defn xml-tag-content-fn [xml-tag]
+  (fn [xml-node]
+    (if (= (xml/tag xml-node) xml-tag)
+      xml-node)))
+
+(defn parse-vector-content [node-tag valsi-content]
+  (map (comp first xml/content) (filter (xml-tag-content-fn node-tag) valsi-content)))
+
+(defn parse-definitions [valsi-content]
+  (-> (xml-tag-content-fn :definition) (some valsi-content) xml/content first))
+
+(defn parse-e-to-l [dict-content]
+  (let [dict-direction (certain-direction-node "English" "lojban")]
+    (for [nlword (xml/content dict-direction)]
+      (let [attrs (xml/attrs nlword)
+            word (:word attrs)
+            valsi (:valsi attrs)
+            sense (:sense attrs)]
+        [valsi (apply str word (if sense ["(" sense ")"]))]))))
+
+(defn parse-l-to-e [dict-content]
+  (let [dict-direction (certain-direction-node "lojban" "English" dict-content)]
+    (for [valsi (xml/content dict-direction)]
+      (let [attrs (xml/attrs valsi)
+            word-type (:type attrs)
+            word (:word attrs)
+            content (xml/content valsi)
+            rafsi (parse-vector-content :rafsi content)
+            selmaho (parse-vector-content :selmaho content)
+            definition (parse-definitions content)
+            notes (:content (some (xml-tag-content-fn "notes") content))]
+        [word (struct word-s word-type word rafsi selmaho definition notes)]))))
+
+(defn parse-jbovlaste [source]
+  (let [dict-content (:content (xml/parse source))
+;        e-to-l (parse-e-to-l dict-content)
+        l-to-e (parse-l-to-e dict-content)]
+;    (println e-to-l)
+;    (throw (Exception.))
+    (into {} l-to-e)))
+
+; Word origin functions
+
+(defn language-processor [language-name source-fields transliteration-field comment-field]
+  (fn [fields]
+    [(fields 0)
+     (struct etymology-s
+       language-name (fields 2)
+       (interpose "/" (filter (partial not= "") (map fields source-fields)))
+       (if transliteration-field (get fields transliteration-field nil))
+       (get fields comment-field nil))]))
+
+(def language-processors
+  {"src/lojban-source-words_zh.txt" (language-processor "Chinese" [3 4 5] 6 7)
+   "src/lojban-source-words_es.txt" (language-processor "Spanish" [3] 4 5)
+   "src/lojban-source-words_en.txt" (language-processor "English" [3] nil 4)
+   "src/lojban-source-words_ru.txt" (language-processor "Russian" [3] 4 6)
+   "src/lojban-source-words_hi.txt" (language-processor "Hindi" [3] 4 6)})
+
+(defn parse-language-1 [field-processor line-seq]
+  (map (comp field-processor vec (partial re-split #"\t")) line-seq))
+
+(defn parse-languages []
+  (map-from-pairs (mapcat #(parse-language-1 (val %) (read-lines (key %)))
+                          language-processors)))
+
+; XML escape character functions.
 
 (def xml-escaped-chars
   {#"<" "&lt;"
@@ -62,92 +139,24 @@
 
 (def replace-id-escape-chars (partial replace-escape-chars id-escaped-chars))
 
-(defn certain-direction-node [from-lang to-lang direction-nodes]
-  (some
-    (fn [each-node]
-      (let [node-attrs (xml/attrs each-node)]
-        (if (and (= (:from node-attrs) from-lang) (= (:to node-attrs) to-lang))
-          each-node)))
-    direction-nodes))
-
-(defn xml-tag-content-fn [xml-tag]
-  (fn [xml-node]
-    (if (= (xml/tag xml-node) xml-tag)
-      xml-node)))
-
-(defn parse-vector-content [node-tag valsi-content]
-  (map (comp first xml/content) (filter (xml-tag-content-fn node-tag) valsi-content)))
-
-(defn parse-definitions [valsi-content]
-  (-> (xml-tag-content-fn :definition) (some valsi-content) xml/content first))
-
-(defn parse-l-to-e [dict-content]
-  (let [dict-direction (certain-direction-node "lojban" "English" dict-content)]
-    (for [valsi (xml/content dict-direction)]
-      (let [attrs (xml/attrs valsi)
-            word-type (:type attrs)
-            word (:word attrs)
-            content (xml/content valsi)
-            rafsi (parse-vector-content :rafsi content)
-            selmaho (parse-vector-content :selmaho content)
-            definition (replace-xml-escape-chars (parse-definitions content))
-            notes (identity ; replace-xml-escape-chars
-                    (:content (some (xml-tag-content-fn "notes") content)))
-            word-id (replace-id-escape-chars word)]
-        [word-id (struct word-s word-type word rafsi selmaho definition notes)]))))
-
-(defn parse-jbovlaste [source]
-  (let [dict-content (:content (xml/parse source))
-        l-to-e (parse-l-to-e dict-content)]
-    (into {} l-to-e)))
-
-; Word origin functions
-
-(defn language-processor [language-name source-fields transliteration-field comment-field]
-  (fn [fields]
-    [(fields 0)
-     (struct etymology-s
-       language-name (fields 2)
-       (interpose "/" (filter (partial not= "") (map fields source-fields)))
-       (if transliteration-field (get fields transliteration-field nil))
-       (get fields comment-field nil))]))
-
-(def language-processors
-  {"src/lojban-source-words_zh.txt" (language-processor "Chinese" [3 4 5] 6 7)
-   "src/lojban-source-words_es.txt" (language-processor "Spanish" [3] 4 5)
-   "src/lojban-source-words_en.txt" (language-processor "English" [3] nil 4)
-   "src/lojban-source-words_ru.txt" (language-processor "Russian" [3] 4 6)
-   "src/lojban-source-words_hi.txt" (language-processor "Hindi" [3] 4 6)})
-
-(defn parse-language-1 [field-processor line-seq]
-  (map (comp field-processor vec (partial re-split #"\t")) line-seq))
-
-(defn parse-languages []
-  (map-from-pairs (mapcat #(parse-language-1 (val %) (read-lines (key %)))
-                          language-processors)))
-
-
-;(map (partial println ">>>") etymology-data)
-
-; Front/back matter functions.
-
-; NONE
-
 ; Dump data as Apple dictionary XML.
 
 (defn transform-string [string process]
   (if (empty? string) "" (process string)))
 
-;(def split-definitions vector)
 (def split-definitions (partial re-split #"\s*\[SEMICOLON\]\s*"))
+
 (def replace-definition-vars
   (partial re-gsub #"\$x\{(\d+)\}\$"
     #(let [variable (get % 1)]
        (str "<var>x" variable "</var>"))))
+
 (defn split-rafsi [x]
   (if (= x "") nil (re-split #"\s+" x)))
+
 (def transform-definitions
   (partial map (partial format "<li>%s</li>")))
+
 (def join-definitions
   (partial s/join "\n"))
 
@@ -160,8 +169,10 @@
 
 (def remove-bad-indexes
   (partial remove #(or (nil? %) (= "the" %) (= "" %))))
+
 (def transform-indexes
   (partial map (partial format "<d:index d:value=\"%s\"/>")))
+
 (def split-notes
   (comp (partial re-gsub #"\[SEMICOLON\]" ";") str))
 
@@ -224,12 +235,12 @@
 </div>
 </d:entry>")
   
-  (doseq [[word-id word-datum] data]
+  (doseq [[word word-datum] data]
     (let [type (get-type word-datum)
-          word (get-word word-datum)
+          word-id (replace-id-escape-chars word)
 ;          keyword (get-keyword word-datum)
           rafsi (if (= type "gismu") (get-rafsi word-datum))
-          definition (get-definition word-datum)
+          definition (-> word-datum get-definition replace-xml-escape-chars)
           notes (get-notes word-datum)
           etymology-table (if (= type "gismu")
                             (make-etymology-table etymology-data word)
