@@ -50,7 +50,7 @@
 (defn parse-vector-content [node-tag valsi-content]
   (map (comp first xml/content) (filter (xml-tag-content-fn node-tag) valsi-content)))
 
-(defn parse-definitions [valsi-content]
+(defn parse-single-content [node-tag valsi-content]
   (-> (xml-tag-content-fn :definition) (some valsi-content) xml/content first))
 
 (defn parse-e-to-l [dict-content]
@@ -71,8 +71,8 @@
             content (xml/content valsi)
             rafsi (parse-vector-content :rafsi content)
             selmaho (parse-vector-content :selmaho content)
-            definition (parse-definitions content)
-            notes (:content (some (xml-tag-content-fn "notes") content))
+            definition (parse-single-content :definition content)
+            notes (parse-single-content :notes content)
             keywords (gloss-words word)]
         [word (struct word-s word-type rafsi selmaho definition notes keywords)]))))
 
