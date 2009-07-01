@@ -151,8 +151,8 @@
 
 (defn match-variable-seq [string]
   ; Also! Math powers may take the form 8^{23}.
-  (if-let [power-match (re-matches #"(\d+)\^\{(\d+)\}" string)]
-    (str (power-match 1) "<sup>" (power-match 2) "</sup>")
+  (if-let [power-match (re-matches #"(\d+)\^(?:\{(\-?\d+)\}|(\d+))" string)]
+    (str (power-match 1) "<sup>" (or (power-match 2) (power-match 3)) "</sup>")
     (format "<var>%s</var>"
       (str-flatten
         (map
@@ -273,16 +273,15 @@
 </ul>
 %s
 %s
-</d:entry>
-"
+</d:entry>"
         word-id word (prepare-indexes word keywords rafsi) word type
         (prepare-secondary-info word-datum word rafsi type) (prepare-definition definition)
         (prepare-notes notes) etymology-table)))
-  (println "</d:dictionary>"))
+  (println "\n</d:dictionary>"))
 
 (defn main- []
   (let [; This is where the word data is read from the Jbovlaste XML dump.
-        word-data (parse-jbovlaste "src/xml-export.html")
+        word-data (parse-jbovlaste "src/xml-export.xml")
         ; This is where the word origin data is read.
         etymology-data (parse-languages)]
 ;    (println word-data)))
