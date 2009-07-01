@@ -149,7 +149,7 @@
 
 (def split-definitions (partial re-split #"\s*\[SEMICOLON\]\s*"))
 
-(defn match-variable-seq [string]
+(defn match-latex [string]
   ; Also! Math powers may take the form 8^{23}.
   (if-let [power-match (re-matches #"(\d+)\^(?:\{(\-?\d+)\}|(\d+))" string)]
     (str (power-match 1) "<sup>" (or (power-match 2) (power-match 3)) "</sup>")
@@ -163,10 +163,9 @@
              (throw (Exception. string)))
           (re-split #"\s*=\s*" string))))))
 
-(def replace-vars
-  (partial re-gsub #"\$([^$]+)\$"
-    #(str-flatten
-       ["<var>" (match-variable-seq (% 1)) "</var>"])))
+(def replace-indicators
+  (comp (partial re-gsub #"\{|\}" "")
+        (partial re-gsub #"\$([^$]+)\$" #(match-latex (% 1)))))
 
 (defn split-rafsi [x]
   (if (= x "") nil (re-split #"\s+" x)))
@@ -179,7 +178,7 @@
 
 (defn- prepare-definition [string]
   (-> string
-    replace-vars
+    replace-indicators
     split-definitions
     transform-definitions
     join-definitions))
@@ -217,7 +216,8 @@
 
 (defn- prepare-notes [string]
   (-> string split-notes
-    (transform-string (comp replace-vars (partial format "<p class=\"note\">%s</p>")))))
+    (transform-string (comp replace-indicators
+                      (partial format "<p class=\"note\">%s</p>")))))
 
 (defn- make-etymology-table [etymology-data word]
   (let [etymologies (etymology-data word)]
