@@ -16,7 +16,7 @@
 (def stop-re #"\.")
 
 (defstruct word-s :type :rafsi :selmaho :definition :notes :keywords :etymologies)
-(defstruct etymology-s :language :lojbanized :natives :transliteration :comment)
+(defstruct etymology-s :language :lojbanized :natives :transliteration)
 (def get-type (accessor word-s :type))
 (def get-selmaho (accessor word-s :selmaho))
 (def get-rafsi (accessor word-s :rafsi))
@@ -86,21 +86,20 @@
 
 ; Word origin functions
 
-(defn language-processor [language-name source-fields transliteration-field comment-field]
+(defn language-processor [language-name source-fields transliteration-field]
   (fn [fields]
     [(fields 0)
      (struct etymology-s
        language-name (fields 2)
        (interpose "/" (filter (partial not= "") (map fields source-fields)))
-       (if transliteration-field (get fields transliteration-field nil))
-       (get fields comment-field nil))]))
+       (if transliteration-field (get fields transliteration-field nil) "~"))]))
 
 (def language-processors
-  {"src/lojban-source-words_zh.txt" (language-processor "Chinese" [3 4 5] 6 7)
-   "src/lojban-source-words_es.txt" (language-processor "Spanish" [3] 4 5)
-   "src/lojban-source-words_en.txt" (language-processor "English" [3] nil 4)
-   "src/lojban-source-words_ru.txt" (language-processor "Russian" [3] 4 6)
-   "src/lojban-source-words_hi.txt" (language-processor "Hindi" [3] 4 6)})
+  {"src/lojban-source-words_zh.txt" (language-processor "Chinese" [3 4 5] 6)
+   "src/lojban-source-words_es.txt" (language-processor "Spanish" [3] 4)
+   "src/lojban-source-words_en.txt" (language-processor "English" [3] nil)
+   "src/lojban-source-words_ru.txt" (language-processor "Russian" [3] 4)
+   "src/lojban-source-words_hi.txt" (language-processor "Hindi" [3] 4)})
 
 (defn parse-language-1 [field-processor line-seq]
   (map (comp field-processor vec (partial re-split #"\t")) line-seq))
@@ -224,7 +223,7 @@
     (if (empty? etymologies)
       ""
       (str-flatten
-        ["<h2>Etymologies</h2>\n<table>\n<tr><th>Language</th><th>Lojbanized</th><th>Native</th><th>Translation</th><th>Comment</th></tr>\n"
+        ["<h2>Etymologies</h2>\n<table>\n<tr><th>Language</th><th>Lojbanized</th><th>Native</th><th>Transliteration</th></tr>\n"
          (map
           (fn [etymology]
             (vector "<tr>" (map #(vector "<td>" (val %) "</td>") etymology) "</tr>\n"))
@@ -241,11 +240,15 @@
 <div class=\"matter\">
 
 <h1>The Lojban Dictionary in English</h1>
-<p>Based on the Jbovlaste dictionary and the word lists from the Logical Language Group of the 1990s.</p>
-<p>Last updated on 2009-06-26.</p>
+<p>Entries are taken on the <a href=\"http://www.lojban.org/publications/reference_grammar/chapter1\">Jbovlaste dictionary</a>. Gismu etymologies are thanks to <a href=\"https://www.dealloc.org/~mublin/\">Mublin</a>, who worked hard to compile them.</p>
+<p>Last updated on 2009-07-01.</p>
 <ul>
 
+<li><a href=\"http://www.lojban.org\">The official Lojban Website</a></li>
 <li><a href=\"http://www.lojban.org/publications/reference_grammar/chapter1\">The Complete Lojban Language</a></li>
+<li><a href=\"http://www.lojban.org/publications/reference_grammar/chapter1\">The Complete Lojban Language</a></li>
+<li><a href=\"http://www.lojban.org/publications/reference_grammar/chapter1\">Jbovlaste, the de facto editable community dictionary</a></li>
+<li><a href=\"https://www.dealloc.org/~mublin/\">Mublin's Lojban etymologies</a></li>
 
 </ul>
 
