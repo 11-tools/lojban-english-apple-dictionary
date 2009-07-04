@@ -28,6 +28,9 @@
 (def get-keywords (accessor word-s :keywords))
 (def get-language (accessor etymology-s :language))
 
+(defn last-char [string]
+  (.charAt string (-> string count dec)))
+
 (def apply-str (partial apply str))
 
 (def str-flatten (comp apply-str flatten))
@@ -224,7 +227,10 @@
   (if (= x "") nil (re-split #"\s+" x)))
 
 (def transform-list-items
-  (partial map (partial format "<li>%s</li>")))
+  (partial map
+    #(if (= (last-char %) \.)
+       (format "<li>%s</li>" %)
+       (format "<li>%s.</li>" %))))
 
 (def join-list-items
   (partial str-join "\n"))
