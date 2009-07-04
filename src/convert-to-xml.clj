@@ -100,7 +100,7 @@
        language-name (fields 2)
        (interpose "/" (filter (partial not= "") (map fields source-fields)))
        (if transliteration-field (get fields transliteration-field "???") "~")
-       (if transliteration-field (get fields translation-field "???") "~"))]))
+       (if translation-field (get fields translation-field "???") "~"))]))
 
 (def language-processors
   {"src/lojban-source-words_zh.txt" (language-processor "Chinese" [3 4] 5 6)
