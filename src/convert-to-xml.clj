@@ -10,13 +10,16 @@
 (use 'clojure.contrib.duck-streams)
 (use 'clojure.contrib.str-utils)
 (use 'clojure.contrib.seq-utils)
+(use 'clojure.contrib.except)
 (use 'clojure.contrib.fcase)
 (use 'name.choi.joshua.fnparse)
+
+;(set! *warn-on-reflection* true)
 
 (def stop-re #"\.")
 
 (defstruct word-s :type :rafsi :selmaho :definition :notes :keywords :etymologies)
-(defstruct etymology-s :language :lojbanized :natives :transliteration)
+(defstruct etymology-s :language :lojbanized :natives :transliteration :translation)
 (def get-type (accessor word-s :type))
 (def get-selmaho (accessor word-s :selmaho))
 (def get-rafsi (accessor word-s :rafsi))
@@ -86,20 +89,22 @@
 
 ; Word origin functions
 
-(defn language-processor [language-name source-fields transliteration-field]
+(defn language-processor
+  [language-name source-fields transliteration-field translation-field]
   (fn [fields]
     [(fields 0)
      (struct etymology-s
        language-name (fields 2)
        (interpose "/" (filter (partial not= "") (map fields source-fields)))
-       (if transliteration-field (get fields transliteration-field nil) "~"))]))
+       (if transliteration-field (get fields transliteration-field "???") "~")
+       (if transliteration-field (get fields translation-field "???") "~"))]))
 
 (def language-processors
-  {"src/lojban-source-words_zh.txt" (language-processor "Chinese" [3 4 5] 6)
-   "src/lojban-source-words_es.txt" (language-processor "Spanish" [3] 4)
-   "src/lojban-source-words_en.txt" (language-processor "English" [3] nil)
-   "src/lojban-source-words_ru.txt" (language-processor "Russian" [3] 4)
-   "src/lojban-source-words_hi.txt" (language-processor "Hindi" [3] 4)})
+  {"src/lojban-source-words_zh.txt" (language-processor "Chinese" [3 4] 5 6)
+   "src/lojban-source-words_es.txt" (language-processor "Spanish" [3] nil 4)
+   "src/lojban-source-words_en.txt" (language-processor "English" [3] nil nil)
+   "src/lojban-source-words_ru.txt" (language-processor "Russian" [3] 4 5)
+   "src/lojban-source-words_hi.txt" (language-processor "Hindi" [3] 4 5)})
 
 (defn parse-language-1 [field-processor line-seq]
   (map (comp field-processor vec (partial re-split #"\t")) line-seq))
@@ -111,7 +116,7 @@
 ; XML escape character functions.
 
 (def xml-escaped-chars
-  [[#";" "[SEMICOLON]"]
+  [[#";" "`SEMICOLON`"]
    [#"<" "&lt;"]
    [#">" "&gt;"]
    [#"&" "&amp;"]
@@ -124,8 +129,6 @@
    #"\." "_"
    #"\s" "--"})
 
-(def replace-semicolons (partial re-gsub #";" "[SEMICOLON]"))
-
 (defn replace-escape-chars [escaped-chars string]
   (if string
     (loop [cur-string string, cur-escaped-char-seq escaped-chars]
@@ -137,16 +140,64 @@
                  (rest cur-escaped-char-seq)))
         cur-string))))
 
-(def replace-xml-escape-chars (partial replace-escape-chars xml-escaped-chars))
+(def replace-xml-escape-chars
+  (partial replace-escape-chars xml-escaped-chars))
 
-(def replace-id-escape-chars (partial replace-escape-chars id-escaped-chars))
+(def replace-id-escape-chars
+  (partial replace-escape-chars id-escaped-chars))
+
+; Splitting definitions and notes on commas outside parentheses and brackets
+
+(def line-separator-r
+  (lit-conc-seq "`SEMICOLON`"))
+
+(def replaced-semicolon-r
+  (constant-semantics line-separator-r ";"))
+
+(def regular-text-r
+  (rep+ (except anything line-separator-r)))
+
+(defn delimited-text-rm [prefix suffix]
+  (complex [content-prefix (lit prefix)
+            content (rep* (except (alt replaced-semicolon-r anything) (lit suffix)))
+            content-suffix (lit suffix)]
+    [content-prefix content content-suffix]))
+
+(def parentheses-text-r
+  (delimited-text-rm \( \)))
+
+(def bracketed-text-r
+  (delimited-text-rm \[ \]))
+
+(def delimited-text-r
+  (alt parentheses-text-r bracketed-text-r))
+
+(def line-r
+  (rep* (alt delimited-text-r regular-text-r)))
+
+(def ws-r
+  (rep* (lit \space)))
+
+(def separated-line-r
+  (complex [_ ws-r, _ (lit-conc-seq "`SEMICOLON`"), _ ws-r, line line-r]
+    line))
+
+(def definition-r
+  (complex [first-line line-r, rest-lines (rep* separated-line-r)]
+    (map str-flatten (cons first-line rest-lines))))
+
+(defn split-list-items [string]
+  (binding [*remainder-accessor* identity
+            *remainder-setter* #(identity %2)]
+    (rule-match definition-r
+      #(throwf "ERROR invalid definition %s" %)
+      #(throwf "ERROR leftovers in definition \"%s\" \"%s\"" %1 (apply-str %2))
+      string)))
 
 ; Dump data as Apple dictionary XML.
 
 (defn transform-string [string process]
   (if (empty? string) "" (process string)))
-
-(def split-definitions (partial re-split #"\s*\[SEMICOLON\]\s*"))
 
 (defn match-latex [string]
   ; Also! Math powers may take the form 8^{23}.
@@ -159,47 +210,48 @@
              (let [var-name (match 1)
                    var-num (or (match 2) (match 3))]
                [var-name "<sub>" var-num "</sub>"])
-             (throw (Exception. string)))
+             (throwf "ERROR invalid LaTEX expression: %s" string))
           (re-split #"\s*=\s*" string))))))
 
 (def replace-indicators
   (comp (partial re-gsub #"\{|\}" "")
         (partial re-gsub #"\$([^$]+)\$" #(match-latex (% 1)))))
 
+(def replace-semicolons
+  (partial re-gsub #"`SEMICOLON`" ";"))
+
 (defn split-rafsi [x]
   (if (= x "") nil (re-split #"\s+" x)))
 
-(def transform-definitions
+(def transform-list-items
   (partial map (partial format "<li>%s</li>")))
 
-(def join-definitions
-  (partial s/join "\n"))
+(def join-list-items
+  (partial str-join "\n"))
 
 (defn- prepare-definition [string]
   (-> string
     replace-indicators
-    split-definitions
-    transform-definitions
-    join-definitions))
+    split-list-items
+    transform-list-items
+    join-list-items))
 
 (def remove-bad-indexes
   (partial remove #(or (nil? %) (= "the" %) (= "" %))))
 
 (def transform-indexes
-  (partial map (partial format "<d:index d:value=\"%s\"/>")))
-
-(def split-notes
-  (comp (partial re-gsub #"\[SEMICOLON\]" ";") str))
+  (partial map (comp (partial format "<d:index d:value=\"%s\"/>")
+                     replace-semicolons)))
 
 (defn- prepare-indexes [word keywords rafsi]
   (let [stripped-word (re-gsub stop-re "" word)]
     (-> #{word stripped-word} (into rafsi) (into keywords) remove-bad-indexes
-        transform-indexes join-definitions)))
+        transform-indexes join-list-items)))
 ;(defn- prepare-indexes [word keyword rafsi]
 ;  (let [stripped-word (re-gsub stop-re "" word)
 ;        keyword-tokens (re-split #"\s+" keyword)]
 ;    (-> #{word stripped-word keyword} (into keyword-tokens) (into rafsi) remove-bad-indexes
-;        transform-indexes join-definitions)))
+;        transform-indexes join-list-items)))
 
 (defn- prepare-secondary-info [word-datum word rafsi word-type]
   (if-let [secondary-info
@@ -213,17 +265,21 @@
     (str-flatten [" ( " secondary-info " )"])
     ""))
 
+(def transform-notes
+  (partial format "<p class=\"notes\">%s</p>"))
+
 (defn- prepare-notes [string]
-  (-> string split-notes
-    (transform-string (comp replace-indicators
-                      (partial format "<p class=\"note\">%s</p>")))))
+  (if (or (nil? string) (= string ""))
+    ""
+    (-> string replace-indicators replace-semicolons 
+      transform-notes)))
 
 (defn- make-etymology-table [etymology-data word]
   (let [etymologies (etymology-data word)]
     (if (empty? etymologies)
       ""
       (str-flatten
-        ["<h2>Etymologies</h2>\n<table>\n<tr><th>Language</th><th>Lojbanized</th><th>Native</th><th>Transliteration</th></tr>\n"
+        ["<h2>Etymologies</h2>\n<table>\n<tr><th>Language</th><th>Lojbanized</th><th>Native</th><th>Transliteration</th><th>Translation</th></tr>\n"
          (map
           (fn [etymology]
             (vector "<tr>" (map #(vector "<td>" (val %) "</td>") etymology) "</tr>\n"))
